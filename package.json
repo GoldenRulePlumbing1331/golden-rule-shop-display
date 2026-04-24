@@ -1,0 +1,12 @@
+{
+  "name": "golden-rule-shop-display",
+  "version": "0.1.0",
+  "description": "Weekly auto-generated shop display for Golden Rule Plumbing",
+  "type": "module",
+  "scripts": {
+    "test-fetch": "node scripts/test-fetch.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
