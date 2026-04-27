@@ -1,4 +1,4 @@
-import { ping, getScheduledJobs } from "../src/hcp.js";
+import { getWeekJobs, groupByDay, pickMajorJobByDay } from "../src/jobs.js";
 
 function mondayOfThisWeek() {
   const now = new Date();
@@ -9,7 +9,6 @@ function mondayOfThisWeek() {
   monday.setUTCHours(0, 0, 0, 0);
   return monday;
 }
-
 function addDays(d, n) {
   const out = new Date(d);
   out.setUTCDate(out.getUTCDate() + n);
@@ -17,38 +16,43 @@ function addDays(d, n) {
 }
 
 (async () => {
-  console.log("=== HCP connection test ===");
-
-  console.log("\n1) Ping test (pulling 1 job)...");
-  const pingResult = await ping();
-  console.log(`   OK — top-level keys:`, Object.keys(pingResult || {}));
-
-  console.log("\n2) Week-of-jobs test...");
   const mon = mondayOfThisWeek();
   const sun = addDays(mon, 7);
-  console.log(`   Range: ${mon.toISOString()}  →  ${sun.toISOString()}`);
+  console.log(`=== Job Board preview ===`);
+  console.log(`Week of ${mon.toISOString().slice(0,10)}\n`);
 
-  const weekJobs = await getScheduledJobs({
+  const jobs = await getWeekJobs({
     startISO: mon.toISOString(),
     endISO: sun.toISOString(),
-    pageSize: 50,
   });
+  console.log(`Active scheduled jobs (cancelled/completed filtered): ${jobs.length}\n`);
 
-  const jobs = weekJobs?.jobs || [];
-  console.log(`   Received ${jobs.length} scheduled job(s) this week.`);
-
-  // ---- DIAGNOSTIC: dump the full structure of the first job ----
-  if (jobs.length > 0) {
-    console.log("\n3) Full structure of first job (so we can find the right field names):");
-    console.log(JSON.stringify(jobs[0], null, 2));
-
-    console.log("\n4) Top-level keys on a job object:");
-    console.log(Object.keys(jobs[0]));
+  const groups = groupByDay(jobs);
+  console.log("--- Counts by day ---");
+  for (const day of ["MON","TUE","WED","THU","FRI","SAT","SUN"]) {
+    console.log(`  ${day}: ${groups[day].length}`);
   }
 
-  console.log("\n=== All good ===");
+  const majors = pickMajorJobByDay(groups);
+  console.log("\n--- Major job per weekday (this is what Slide 6 will show) ---");
+  for (const day of ["MON","TUE","WED","THU","FRI"]) {
+    const j = majors[day];
+    if (!j) {
+      console.log(`  ${day}:  (no scheduled work)`);
+      continue;
+    }
+    console.log(
+      `  ${day}  ${j.timeLabel?.padEnd(8)}  ${j.durationLabel.padEnd(9)}  ${j.techDisplay.padEnd(22)}  ${j.description.slice(0, 60)}`
+    );
+  }
+
+  console.log(`\n--- Status breakdown (sanity check) ---`);
+  const statusCounts = {};
+  for (const j of jobs) {
+    statusCounts[j.workStatus] = (statusCounts[j.workStatus] || 0) + 1;
+  }
+  console.log(statusCounts);
 })().catch(err => {
-  console.error("\n!!! FAILED !!!");
-  console.error(err.message);
+  console.error("FAILED:", err.message);
   process.exit(1);
 });
