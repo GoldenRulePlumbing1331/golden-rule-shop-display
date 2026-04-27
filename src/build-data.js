@@ -272,6 +272,7 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
   const [
     jobBoardR, kpisR, onCallR, eventsR,
     newItemsR, movedItemsR, safetyR, shoutoutR,
+    tagDurationsR,
   ] = await Promise.all([
     safe("job board", () => buildJobBoard(thisMon, nextMon)),
     safe("KPIs", () => buildKPIs(lastMon, thisMon)),
@@ -281,6 +282,7 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
     safe("moved items", () => buildMovedItems(sheetId)),
     safe("safety topic", () => buildSafetyTopic(sheetId, thisMon)),
     safe("shoutout", () => buildShoutout(sheetId, roster)),
+    safe("tag durations", () => getTagDurations({ days: 30, topN: 8 })),
   ]);
 
   return {
@@ -288,18 +290,18 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
       mondayISO: isoDateOnly(thisMon),
       humanLabel: fmtFullDateET(thisMon),
     },
-    jobBoard:    jobBoardR.ok ? jobBoardR.data : null,
-    kpis:        kpisR.ok ? kpisR.data : null,
-    onCall:      onCallR.ok ? onCallR.data : null,
-    events:      eventsR.ok ? eventsR.data : [],
-    newItems:    newItemsR.ok ? newItemsR.data : [],
-    movedItems:  movedItemsR.ok ? movedItemsR.data : [],
-    safetyTopic: safetyR.ok ? safetyR.data : null,
-    shoutout:    shoutoutR.ok ? shoutoutR.data : null,
-    rosterCount: roster.length,
+    jobBoard:     jobBoardR.ok ? jobBoardR.data : null,
+    kpis:         kpisR.ok ? kpisR.data : null,
+    onCall:       onCallR.ok ? onCallR.data : null,
+    events:       eventsR.ok ? eventsR.data : [],
+    newItems:     newItemsR.ok ? newItemsR.data : [],
+    movedItems:   movedItemsR.ok ? movedItemsR.data : [],
+    safetyTopic:  safetyR.ok ? safetyR.data : null,
+    shoutout:     shoutoutR.ok ? shoutoutR.data : null,
+    tagDurations: tagDurationsR.ok ? tagDurationsR.data : null,
+    rosterCount:  roster.length,
     errors: [
       jobBoardR, kpisR, onCallR, eventsR,
-      newItemsR, movedItemsR, safetyR, shoutoutR,
+      newItemsR, movedItemsR, safetyR, shoutoutR, tagDurationsR,
     ].filter(r => !r.ok).map(r => r.error),
   };
-}
