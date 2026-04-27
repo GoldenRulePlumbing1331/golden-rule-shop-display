@@ -8,6 +8,16 @@ import { getScheduledJobs } from "./hcp.js";
 
 const ET = "America/New_York";
 
+function formatTechDisplay(names) {
+  if (!names || names.length === 0) return "[ UNASSIGNED ]";
+  if (names.length === 1) return names[0];
+
+  // For multi-tech jobs, show the lead's first+last and a "+N" suffix.
+  // This keeps the slide column readable.
+  const lead = names[0];
+  return `${lead}  +${names.length - 1}`;
+}
+
 function fmtDayET(isoString) {
   if (!isoString) return null;
   return new Intl.DateTimeFormat("en-US", {
@@ -84,7 +94,7 @@ description: job.description
     timeLabel: fmtTimeET(start),     // "9:00 AM"
     dateLabel: fmtDateET(start),     // "Mon Apr 27"
     techNames,                       // ["John Smith"] — usually 0 or 1
-    techDisplay: techNames.length ? techNames.join(", ") : "[ UNASSIGNED ]",
+    techDisplay: formatTechDisplay(techNames),
     customerName: [cust.first_name, cust.last_name].filter(Boolean).join(" ") || cust.company || "(no customer)",
     city: addr.city || null,
     totalAmount: job.total_amount || 0,
