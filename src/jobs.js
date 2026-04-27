@@ -204,3 +204,70 @@ export function pickMajorJobByDay(groups) {
   }
   return out;
 }
+// ---------------------------------------------------------------------------
+// Last-week completed jobs → for Slide 10 KPI tiles ("Jobs Closed", "Revenue WTD")
+// ---------------------------------------------------------------------------
+
+import { getJobsInRange, getEmployees } from "./hcp.js";
+
+const COMPLETE_STATUSES = new Set([
+  "complete",
+  "complete unrated",
+  "complete rated",
+]);
+
+export async function getCompletedJobsInRange({ startISO, endISO }) {
+  const all = [];
+  let page = 1;
+  while (true) {
+    const resp = await getJobsInRange({ startISO, endISO, pageSize: 100, page });
+    const batch = resp?.jobs || [];
+    all.push(...batch);
+    const totalPages = resp?.total_pages || 1;
+    if (page >= totalPages) break;
+    page += 1;
+    if (page > 20) break;
+  }
+  return all
+    .map(shapeJob)
+    .filter(j => COMPLETE_STATUSES.has(j.workStatus));
+}
+
+// Roll up KPIs from a list of completed jobs.
+export function rollupKPIs(completedJobs) {
+  const jobsClosed = completedJobs.length;
+  const revenue = completedJobs.reduce((sum, j) => sum + (j.totalAmount || 0), 0);
+  return {
+    jobsClosed,
+    revenueDollars: Math.round(revenue),       // for "$48,250" display
+    revenueDisplay: formatRevenue(revenue),     // formatted string
+  };
+}
+
+function formatRevenue(amount) {
+  // HCP returns total_amount as a number in dollars (verified from the test dump:
+  // total_amount: 0 was a plain integer). If it ever comes back in cents, divide here.
+  if (!amount || amount < 0) return "$0";
+  if (amount >= 1000) {
+    return "$" + amount.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  }
+  return "$" + amount.toFixed(0);
+}
+
+// ---------------------------------------------------------------------------
+// Employees → for the on-call rotation lookup
+// ---------------------------------------------------------------------------
+
+export async function getEmployeeRoster() {
+  const resp = await getEmployees({ pageSize: 100 });
+  const list = resp?.employees || [];
+  return list.map(e => ({
+    id: e.id,
+    firstName: e.first_name,
+    lastName: e.last_name,
+    fullName: `${e.first_name || ""} ${e.last_name || ""}`.trim(),
+    mobile: e.mobile_number || null,
+    email: e.email || null,
+    role: e.role || null,
+  }));
+}
