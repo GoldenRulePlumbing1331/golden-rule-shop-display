@@ -94,7 +94,16 @@ const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
     console.log(`  Jobs Closed (last week):  ${data.kpis.jobsClosed}`);
     console.log(`  Revenue (last week):       ${data.kpis.revenueDisplay}`);
   }
-
+  
+  // ---- Slide: Tag Durations ----
+  console.log("\n[ Slide — Average Job Time by Category ]");
+  if (!data.tagDurations || data.tagDurations.length === 0) {
+    console.log("  (no tag duration data)");
+  } else {
+    for (const r of data.tagDurations) {
+      console.log(`  ${r.tag.padEnd(28)}  ${r.medianLabel.padStart(8)}  (n=${r.sampleCount})`);
+    }
+  }
   // ---- Errors ----
   if (data.errors.length > 0) {
     console.log("\n[ Errors during build ]");
