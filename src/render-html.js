@@ -103,7 +103,6 @@ function buildCSS() {
     }
     body { user-select: none; -webkit-user-select: none; }
 
-    /* Stage: maintains 16:9 aspect ratio, scales to fit viewport */
     .stage {
       position: fixed;
       inset: 0;
@@ -115,14 +114,13 @@ function buildCSS() {
     .deck {
       position: relative;
       width: 100vw;
-      height: 56.25vw;        /* 16:9 */
+      height: 56.25vw;
       max-height: 100vh;
-      max-width: 177.78vh;    /* 16:9 */
+      max-width: 177.78vh;
       background: ${COLORS.STEEL_LIGHT};
       overflow: hidden;
     }
 
-    /* All slides positioned absolutely, only one visible at a time */
     .slide {
       position: absolute;
       inset: 0;
@@ -134,9 +132,6 @@ function buildCSS() {
     }
     .slide.active { opacity: 1; pointer-events: auto; z-index: 2; }
 
-    /* Generic positional units — % of slide dimensions */
-    .pos { position: absolute; }
-
     /* Header bar (top) */
     .header-bar {
       position: absolute;
@@ -146,6 +141,7 @@ function buildCSS() {
       display: flex;
       align-items: center;
       padding: 0 3% 0 1.5%;
+      z-index: 5;
     }
     .header-bar::before {
       content: "";
@@ -154,12 +150,6 @@ function buildCSS() {
       width: 1.35%;
       background: ${COLORS.YELLOW};
     }
-    .header-bar .icon {
-      width: 3.15%;
-      height: 56%;
-      margin-right: 1.5%;
-      flex-shrink: 0;
-    }
     .header-bar .title {
       font-family: 'Arial Black', 'Arial', sans-serif;
       font-size: 2.6vw;
@@ -167,11 +157,13 @@ function buildCSS() {
       color: ${COLORS.WHITE};
       letter-spacing: 0.04em;
       flex: 1;
+      padding-left: 1.5%;
     }
     .header-bar .brand {
       font-size: 1vw;
       letter-spacing: 0.1em;
       text-align: right;
+      flex-shrink: 0;
     }
     .header-bar .brand .gr { color: ${COLORS.YELLOW}; font-weight: bold; }
     .header-bar .brand .pc { color: ${COLORS.WHITE}; }
@@ -185,30 +177,37 @@ function buildCSS() {
       display: flex;
       align-items: center;
       padding: 0 3%;
+      z-index: 5;
     }
     .footer-bar .left {
       flex: 1;
       color: ${COLORS.WHITE};
-      font-size: 1vw;
+      font-size: 0.9vw;
       font-weight: bold;
       letter-spacing: 0.1em;
     }
     .footer-bar .right {
       color: ${COLORS.YELLOW};
-      font-size: 1vw;
+      font-size: 0.9vw;
       font-weight: bold;
       letter-spacing: 0.1em;
     }
 
     /* Cover slide */
     .cover {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
       background: ${COLORS.NAVY_DARK};
+      overflow: hidden;
     }
     .cover .top-stripe {
       position: absolute;
       top: 0; left: 0; right: 0;
       height: 1.6%;
       background: ${COLORS.YELLOW};
+      z-index: 2;
     }
     .cover .bottom-bar {
       position: absolute;
@@ -223,6 +222,7 @@ function buildCSS() {
       font-weight: 900;
       color: ${COLORS.NAVY_DARK};
       letter-spacing: 0.04em;
+      z-index: 2;
     }
     .cover .corp-tag {
       position: absolute;
@@ -231,6 +231,7 @@ function buildCSS() {
       font-size: 1.4vw;
       font-weight: bold;
       letter-spacing: 0.16em;
+      z-index: 3;
     }
     .cover .logo {
       position: absolute;
@@ -240,6 +241,7 @@ function buildCSS() {
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
+      z-index: 3;
     }
     .cover .headline {
       position: absolute;
@@ -250,6 +252,7 @@ function buildCSS() {
       font-weight: 900;
       letter-spacing: 0.04em;
       line-height: 1.0;
+      z-index: 3;
     }
     .cover .headline .shop { color: ${COLORS.WHITE}; }
     .cover .headline .briefing { color: ${COLORS.YELLOW}; margin-top: 0.6%; }
@@ -260,6 +263,7 @@ function buildCSS() {
       font-size: 2vw;
       font-weight: bold;
       letter-spacing: 0.12em;
+      z-index: 3;
     }
     .cover .city {
       position: absolute;
@@ -268,6 +272,7 @@ function buildCSS() {
       font-size: 1.3vw;
       font-weight: bold;
       letter-spacing: 0.12em;
+      z-index: 3;
     }
 
     /* Generic slide body padding to allow for header */
@@ -361,6 +366,7 @@ function buildCSS() {
       font-size: 4.2vw;
       font-weight: 900;
       margin-bottom: 1%;
+      white-space: nowrap;
     }
     .oncall .emergency-247 {
       font-family: 'Arial Black', sans-serif;
@@ -810,7 +816,12 @@ function buildCSS() {
       letter-spacing: 0.16em;
     }
 
-    /* Time Tracking table */
+    /* ============================================================
+       Time Tracking — fully restructured table
+       Top header (Tech | 30 days | 7 days | # jobs)  → 5%
+       Sub-header (the OMW/START/FINISH labels)       → 3.5%
+       Body rows                                      → flex
+       ============================================================ */
     .tt-table {
       position: absolute;
       top: 6%; left: 3.75%; right: 3.75%; bottom: 9%;
@@ -823,15 +834,16 @@ function buildCSS() {
       align-items: stretch;
     }
     .tt-row.head {
+      height: 5%;
+      flex-shrink: 0;
+    }
+    .tt-row.head .tt-cell {
       background: ${COLORS.NAVY_DARK};
       color: ${COLORS.YELLOW};
       font-family: 'Arial Black', sans-serif;
       font-size: 0.9vw;
       font-weight: 900;
       letter-spacing: 0.14em;
-      height: 4%;
-    }
-    .tt-row.head .tt-cell {
       display: flex;
       align-items: center;
       padding: 0 1.5%;
@@ -839,20 +851,29 @@ function buildCSS() {
     .tt-row.head .tt-cell.center {
       justify-content: center;
     }
-    .tt-row.head .block-30 { background: ${COLORS.NAVY}; }
-    .tt-row.head .block-7 { background: ${COLORS.STEEL}; }
+    .tt-row.head .tt-cell.banner-30 { background: ${COLORS.NAVY}; }
+    .tt-row.head .tt-cell.banner-7 { background: ${COLORS.STEEL}; }
     .tt-row.subhead {
+      height: 3.5%;
+      flex-shrink: 0;
       background: ${COLORS.STEEL_LIGHT};
-      border: 1px solid ${COLORS.GRAY_LINE};
-      height: 2.6%;
       font-size: 0.7vw;
       color: ${COLORS.GRAY_TEXT};
       font-weight: bold;
       letter-spacing: 0.14em;
     }
+    .tt-row.subhead .tt-cell {
+      border-top: 1px solid ${COLORS.GRAY_LINE};
+      border-bottom: 1px solid ${COLORS.GRAY_LINE};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     .tt-row.subhead .tt-subblock {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
+      border-top: 1px solid ${COLORS.GRAY_LINE};
+      border-bottom: 1px solid ${COLORS.GRAY_LINE};
     }
     .tt-row.subhead .tt-subcell {
       display: flex;
@@ -861,8 +882,7 @@ function buildCSS() {
     }
     .tt-row.body {
       flex: 1;
-      max-height: 4%;
-      border: 1px solid ${COLORS.GRAY_LINE};
+      min-height: 0;
       font-size: 0.95vw;
     }
     .tt-row.body.alt { background: ${COLORS.STEEL_LIGHT}; }
@@ -874,6 +894,8 @@ function buildCSS() {
       font-family: 'Arial Black', sans-serif;
       color: ${COLORS.NAVY_DARK};
       font-weight: 900;
+      border-left: 1px solid ${COLORS.GRAY_LINE};
+      border-right: 1px solid ${COLORS.GRAY_LINE};
     }
     .tt-row.body .tt-jobs {
       display: flex;
@@ -881,10 +903,17 @@ function buildCSS() {
       justify-content: center;
       color: ${COLORS.GRAY_TEXT};
       font-weight: bold;
+      border-right: 1px solid ${COLORS.GRAY_LINE};
     }
     .tt-row.body .tt-block {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
+      border-right: 1px solid ${COLORS.GRAY_LINE};
+    }
+    .tt-row.body:last-child .tt-name,
+    .tt-row.body:last-child .tt-jobs,
+    .tt-row.body:last-child .tt-block {
+      border-bottom: 1px solid ${COLORS.GRAY_LINE};
     }
     .tt-cell.pct {
       display: flex;
@@ -892,7 +921,7 @@ function buildCSS() {
       justify-content: center;
       font-family: 'Arial Black', sans-serif;
       font-weight: 900;
-      margin: 0.2%;
+      margin: 0.15%;
     }
     .pct.green { background: #C8E6C9; color: ${COLORS.NAVY_DARK}; }
     .pct.yellow { background: #FFF9C4; color: ${COLORS.NAVY_DARK}; }
@@ -927,7 +956,6 @@ function buildCSS() {
       width: 45%;
       background: ${COLORS.NAVY_DARK};
       padding: 3%;
-      position: absolute;
     }
     .safety-left::before {
       content: "";
@@ -1028,7 +1056,6 @@ function buildCSS() {
       align-items: center;
       justify-content: center;
       padding: 3%;
-      position: relative;
     }
     .shoutout-card::before {
       content: "";
@@ -1079,7 +1106,7 @@ function buildCSS() {
       line-height: 1.4;
     }
 
-    /* KPIs / Goals */
+    /* KPIs / Goals — restructured for proper bar chart layout */
     .kpi-tiles {
       position: absolute;
       top: 1.5%; left: 3.75%; right: 3.75%;
@@ -1134,15 +1161,15 @@ function buildCSS() {
       background: ${COLORS.WHITE};
       border: 1px solid ${COLORS.GRAY_LINE};
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      padding: 2%;
-      position: relative;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
-    .chart-card::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0;
+    .chart-card .top-stripe {
       height: 4%;
       background: ${COLORS.YELLOW};
+      flex-shrink: 0;
     }
     .chart-card .title {
       font-family: 'Arial Black', sans-serif;
@@ -1150,12 +1177,19 @@ function buildCSS() {
       font-size: 1.1vw;
       font-weight: 900;
       letter-spacing: 0.1em;
-      margin-top: 1%;
-      margin-bottom: 1.5%;
+      padding: 1.5% 2% 1.5% 2%;
+      flex-shrink: 0;
     }
     .chart-area {
-      position: absolute;
-      top: 12%; left: 2%; right: 2%; bottom: 4%;
+      flex: 1;
+      min-height: 0;
+      padding: 0 2% 2% 2%;
+      position: relative;
+    }
+    .chart-area canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
 
     /* Progress indicator */
@@ -1182,8 +1216,7 @@ function htmlHeader(title) {
     <div class="header-bar">
       <div class="title">${escapeHtml(title)}</div>
       <div class="brand">
-        <span class="gr">GOLDEN RULE</span>
-        <span class="pc">  PLUMBING & CONTRACTING</span>
+        <span class="gr">GOLDEN RULE</span><span class="pc">  PLUMBING & CONTRACTING</span>
       </div>
     </div>
   `;
@@ -1501,13 +1534,13 @@ function buildTimeTrackingSlideHTML({ hygiene }, slideLabel) {
       <div class="tt-table">
         <div class="tt-row head">
           <div class="tt-cell">TECH</div>
-          <div class="tt-cell center block-30">LAST 30 DAYS</div>
-          <div class="tt-cell center block-7">LAST 7 DAYS</div>
+          <div class="tt-cell center banner-30">LAST 30 DAYS</div>
+          <div class="tt-cell center banner-7">LAST 7 DAYS</div>
           <div class="tt-cell center"># JOBS</div>
           <div class="tt-cell"></div>
         </div>
         <div class="tt-row subhead">
-          <div></div>
+          <div class="tt-cell"></div>
           <div class="tt-subblock">
             <div class="tt-subcell">OMW</div>
             <div class="tt-subcell">START</div>
@@ -1518,8 +1551,8 @@ function buildTimeTrackingSlideHTML({ hygiene }, slideLabel) {
             <div class="tt-subcell">START</div>
             <div class="tt-subcell">FINISH</div>
           </div>
-          <div></div>
-          <div></div>
+          <div class="tt-cell"></div>
+          <div class="tt-cell"></div>
         </div>
         ${bodyRows}
       </div>
@@ -1623,9 +1656,10 @@ function buildKPIsSlideHTML({ kpis }, slideLabel) {
     <div class="slide-body">
       <div class="kpi-tiles">${tilesHTML}</div>
       <div class="chart-card">
+        <div class="top-stripe"></div>
         <div class="title">JOBS COMPLETED BY TECHNICIAN  —  LAST WEEK</div>
         <div class="chart-area">
-          <canvas id="bytech-chart" data-chart='${chartData}'></canvas>
+          <canvas data-chart='${chartData}'></canvas>
         </div>
       </div>
     </div>
@@ -1646,19 +1680,18 @@ function buildSlideshowJS(slidePlan, slideTimings) {
     function showSlide(idx) {
       slides.forEach((s, i) => s.classList.toggle('active', i === idx));
 
-      // Trigger chart render when KPIs slide becomes active
+      // Trigger chart render when KPIs slide becomes active.
+      // Re-render every time the slide becomes active so layout reflects current viewport.
       const slide = slides[idx];
       const canvas = slide.querySelector('canvas[data-chart]');
-      if (canvas && !canvas.dataset.rendered) {
-        renderBarChart(canvas);
-        canvas.dataset.rendered = "true";
+      if (canvas) {
+        // Defer to next frame so the slide's CSS transition / display has applied
+        requestAnimationFrame(() => renderBarChart(canvas));
       }
 
-      // Animate progress bar over the slide's duration
       const seconds = TIMINGS[idx];
       progressBar.style.transition = 'none';
       progressBar.style.width = '0%';
-      // Force reflow to commit the 0% before re-enabling transition
       progressBar.offsetWidth;
       progressBar.style.transition = 'width ' + seconds + 's linear';
       progressBar.style.width = '100%';
@@ -1670,17 +1703,13 @@ function buildSlideshowJS(slidePlan, slideTimings) {
       }, seconds * 1000);
     }
 
-    // Auto-refresh the page once every 12 hours so updates land automatically.
-    // 12 hours guarantees we always pick up Monday morning's build during the workday.
     setTimeout(() => location.reload(), 12 * 60 * 60 * 1000);
 
-    // Click anywhere to advance immediately (handy for QA)
     document.addEventListener('click', () => {
       currentIndex = (currentIndex + 1) % slides.length;
       showSlide(currentIndex);
     });
 
-    // Keyboard nav for desktop preview
     document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowRight' || e.key === ' ') {
         currentIndex = (currentIndex + 1) % slides.length;
@@ -1691,19 +1720,28 @@ function buildSlideshowJS(slidePlan, slideTimings) {
       }
     });
 
-    // Renders a vertical bar chart on a canvas. Pure JS, no library —
-    // keeps the HTML standalone with no CDN dependency.
+    // Re-render charts on resize so they stay sharp when window dimensions change
+    window.addEventListener('resize', () => {
+      const activeCanvas = document.querySelector('.slide.active canvas[data-chart]');
+      if (activeCanvas) renderBarChart(activeCanvas);
+    });
+
     function renderBarChart(canvas) {
       const data = JSON.parse(canvas.dataset.chart);
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
+      // If the canvas isn't yet laid out (rect is 0), skip — it'll re-render when active
+      if (rect.width === 0 || rect.height === 0) return;
+
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
       const ctx = canvas.getContext('2d');
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, rect.width, rect.height);
 
       const W = rect.width, H = rect.height;
-      const padL = 30, padR = 10, padT = 10, padB = 40;
+      const padL = 40, padR = 12, padT = 14, padB = 36;
       const plotW = W - padL - padR;
       const plotH = H - padT - padB;
 
@@ -1711,12 +1749,12 @@ function buildSlideshowJS(slidePlan, slideTimings) {
       const labels = data.labels;
       if (values.length === 0) return;
       const maxVal = Math.max(...values, 1);
-      // Round up to nearest 5
-      const yMax = Math.ceil(maxVal / 5) * 5;
+      const yMax = Math.max(5, Math.ceil(maxVal / 5) * 5);
 
       // Y-axis grid lines + labels
       ctx.strokeStyle = '${COLORS.GRAY_LINE}';
       ctx.fillStyle = '${COLORS.GRAY_TEXT}';
+      ctx.lineWidth = 1;
       ctx.font = '11px Arial';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
@@ -1728,27 +1766,34 @@ function buildSlideshowJS(slidePlan, slideTimings) {
         ctx.moveTo(padL, y);
         ctx.lineTo(W - padR, y);
         ctx.stroke();
-        ctx.fillText(String(v), padL - 6, y);
+        ctx.fillText(String(v), padL - 8, y);
       }
 
       // Bars
-      const barW = plotW / values.length * 0.7;
-      const barGap = plotW / values.length * 0.3;
+      const slot = plotW / values.length;
+      const barW = slot * 0.7;
+      const barOffset = slot * 0.15;
       ctx.fillStyle = '${COLORS.NAVY_DARK}';
       for (let i = 0; i < values.length; i++) {
-        const x = padL + i * (plotW / values.length) + barGap / 2;
+        const x = padL + i * slot + barOffset;
         const h = (values[i] / yMax) * plotH;
         const y = padT + plotH - h;
         ctx.fillRect(x, y, barW, h);
 
-        // Value label inside the bar
-        if (h > 20) {
+        // Value label
+        if (h > 22) {
           ctx.fillStyle = '${COLORS.WHITE}';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
-          ctx.font = 'bold 11px Arial';
-          ctx.fillText(String(values[i]), x + barW / 2, y + 4);
+          ctx.font = 'bold 12px Arial';
+          ctx.fillText(String(values[i]), x + barW / 2, y + 5);
           ctx.fillStyle = '${COLORS.NAVY_DARK}';
+        } else {
+          ctx.fillStyle = '${COLORS.NAVY_DARK}';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.font = 'bold 12px Arial';
+          ctx.fillText(String(values[i]), x + barW / 2, y - 4);
         }
       }
 
@@ -1758,12 +1803,11 @@ function buildSlideshowJS(slidePlan, slideTimings) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       for (let i = 0; i < labels.length; i++) {
-        const x = padL + i * (plotW / values.length) + (plotW / values.length) / 2;
+        const x = padL + i * slot + slot / 2;
         ctx.fillText(labels[i], x, padT + plotH + 8);
       }
     }
 
-    // Boot
     showSlide(0);
   `;
 }
@@ -1771,7 +1815,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
 // ---------- Main entry point ----------
 
 export async function renderHTML(data, outputPath) {
-  // Build the same plan as the .pptx
   const plan = [];
   plan.push({ key: "cover",        label: "COVER" });
   plan.push({ key: "oncall",       label: "ON CALL" });
