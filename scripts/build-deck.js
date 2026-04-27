@@ -1,11 +1,10 @@
 import { buildData } from "../src/build-data.js";
 import { renderDeck } from "../src/render-deck.js";
-import { uploadFileToDrive } from "../src/google.js";
+import { publishToCurrentRelease } from "../src/github-release.js";
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
-const DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
-const SKIP_UPLOAD = process.env.SKIP_DRIVE_UPLOAD === "true";
+const SKIP_PUBLISH = process.env.SKIP_PUBLISH === "true";
 
 (async () => {
   if (!SHEET_ID) throw new Error("GOOGLE_SHEET_ID env var not set");
@@ -18,46 +17,28 @@ const SKIP_UPLOAD = process.env.SKIP_DRIVE_UPLOAD === "true";
     for (const e of data.errors) console.warn("  -", e);
   }
 
-  // Build under a stable filename so the Drive upload overwrites consistently.
-  const stableFilename = "GoldenRule_ShopBriefing_CURRENT.pptx";
-  const datedFilename = `GoldenRule_ShopBriefing_${data.weekOf.mondayISO}.pptx`;
-  const outputPath = `./output/${stableFilename}`;
+  const filename = "GoldenRule_ShopBriefing_CURRENT.pptx";
+  const outputPath = `./output/${filename}`;
 
   console.log(`Rendering deck → ${outputPath}`);
   const result = await renderDeck(data, outputPath);
-
   console.log(`\nDeck written. ${result.slideCount} slides:`);
   result.plan.forEach((k, i) => console.log(`  ${i + 1}. ${k}`));
 
-  // Drive upload — skip if explicitly disabled or if folder ID isn't set.
-  if (SKIP_UPLOAD) {
-    console.log("\nSkipping Drive upload (SKIP_DRIVE_UPLOAD=true)");
-    return;
-  }
-  if (!DRIVE_FOLDER_ID) {
-    console.warn("\nGOOGLE_DRIVE_FOLDER_ID not set — skipping Drive upload.");
+  if (SKIP_PUBLISH) {
+    console.log("\nSkipping release publish (SKIP_PUBLISH=true)");
     return;
   }
 
-  console.log(`\nUploading to Drive folder ${DRIVE_FOLDER_ID}...`);
-
-  // Upload "CURRENT" — this is the file the shop TV reads from
-  const currentResult = await uploadFileToDrive({
+  console.log("\nPublishing to GitHub release 'current'...");
+  const pub = await publishToCurrentRelease({
     filePath: outputPath,
-    folderId: DRIVE_FOLDER_ID,
-    mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    displayName: stableFilename,
+    displayName: filename,
+    weekHumanLabel: data.weekOf.humanLabel,
   });
-  console.log(`  CURRENT → ${currentResult.action}: ${currentResult.webViewLink}`);
-
-  // Also upload a dated archive copy so we keep a history
-  const archiveResult = await uploadFileToDrive({
-    filePath: outputPath,
-    folderId: DRIVE_FOLDER_ID,
-    mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    displayName: datedFilename,
-  });
-  console.log(`  ARCHIVE → ${archiveResult.action}: ${archiveResult.webViewLink}`);
+  console.log(`\n✓ Download URL (stable bookmark for the shop TV):`);
+  console.log(`  ${pub.downloadUrl}`);
+  console.log(`\n  Release page: ${pub.releaseUrl}`);
 })().catch(err => {
   console.error("FATAL:", err);
   process.exit(1);
