@@ -89,14 +89,17 @@ function shapeJob(job) {
   };
 }
 
-// Statuses we DON'T want to show on the shop board.
-// We want active scheduled work, not cancelled or completed.
+// HCP work_status values we DON'T want on the Job Board.
+// Values seen in real data: 'scheduled', 'in progress', 'complete unrated',
+// 'user canceled', plus likely 'pro canceled', 'complete rated', 'needs scheduling'.
 const HIDE_STATUSES = new Set([
   "user canceled",
   "pro canceled",
-  "completed",
-  "completed unrated",
-  "completed rated",
+  "complete",
+  "complete unrated",
+  "complete rated",
+  "needs scheduling",
+  "unscheduled",
 ]);
 
 function isOnBoard(job) {
