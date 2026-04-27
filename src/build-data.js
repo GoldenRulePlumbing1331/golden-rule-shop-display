@@ -308,7 +308,7 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
   // Run independent sections in parallel
   const [
     jobBoardR, kpisR, onCallR, eventsR,
-    newItemsR, movedItemsR, safetyR, shoutoutR, bdayR,
+    newItemsR, movedItemsR, safetyR, shoutoutR,
   ] = await Promise.all([
     safe("job board", () => buildJobBoard(thisMon, nextMon)),
     safe("KPIs", () => buildKPIs(lastMon, thisMon)),
@@ -318,7 +318,6 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
     safe("moved items", () => buildMovedItems(sheetId)),
     safe("safety topic", () => buildSafetyTopic(sheetId, thisMon)),
     safe("shoutout", () => buildShoutout(sheetId, roster)),
-    safe("birthdays/anniversaries", () => buildBirthdaysAndAnniversaries(sheetId)),
   ]);
 
   return {
