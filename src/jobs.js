@@ -355,3 +355,122 @@ export async function getTagDurations({ daysBack = 30, topN = 8 } = {}) {
   rows.sort((a, b) => b.sampleCount - a.sampleCount);
   return rows.slice(0, topN);
 }
+
+// ---------------------------------------------------------------------------
+// Timestamp hygiene — per-tech compliance with OMW / Start / Finish
+// ---------------------------------------------------------------------------
+
+// Compute compliance for one job. All three buttons (OMW, Start, Finish) are
+// tracked on every job — the shop expects every tech to hit all three on
+// every visit, regardless of job type.
+function jobCompliance(job) {
+  const wt = job.work_timestamps || {};
+  return {
+    omwHit: Boolean(wt.on_my_way_at),
+    startHit: Boolean(wt.started_at),
+    finishHit: Boolean(wt.completed_at),
+  };
+}
+
+function rollupTech(empId, empName, jobs) {
+  const stats = {
+    employeeId: empId,
+    name: empName,
+    totalJobs: jobs.length,
+    omwHit: 0,
+    startHit: 0,
+    finishHit: 0,
+  };
+  for (const j of jobs) {
+    const c = jobCompliance(j);
+    if (c.omwHit) stats.omwHit += 1;
+    if (c.startHit) stats.startHit += 1;
+    if (c.finishHit) stats.finishHit += 1;
+  }
+  // All three percentages use the same denominator (total jobs)
+  stats.omwPct    = jobs.length > 0 ? Math.round(100 * stats.omwHit    / jobs.length) : null;
+  stats.startPct  = jobs.length > 0 ? Math.round(100 * stats.startHit  / jobs.length) : null;
+  stats.finishPct = jobs.length > 0 ? Math.round(100 * stats.finishHit / jobs.length) : null;
+
+  // Overall: simple average of the three percentages
+  const pcts = [stats.omwPct, stats.startPct, stats.finishPct].filter(p => p !== null);
+  stats.overallPct = pcts.length > 0
+    ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length)
+    : null;
+  return stats;
+}
+
+async function computeHygieneForWindow({ daysBack }) {
+  const end = new Date();
+  const start = new Date();
+  start.setUTCDate(start.getUTCDate() - daysBack);
+  start.setUTCHours(0, 0, 0, 0);
+
+  const all = [];
+  let page = 1;
+  while (true) {
+    const resp = await getJobsInRange({
+      startISO: start.toISOString(),
+      endISO: end.toISOString(),
+      pageSize: 100,
+      page,
+    });
+    const batch = resp?.jobs || [];
+    all.push(...batch);
+    const totalPages = resp?.total_pages || 1;
+    if (page >= totalPages) break;
+    page += 1;
+    if (page > 20) break;
+  }
+
+  // Only completed jobs — work in progress shouldn't count against finish %
+  const eligible = all.filter(j => COMPLETE_STATUSES.has(j.work_status));
+
+  // Group by lead tech (first assigned employee)
+  const byTech = new Map();
+  for (const j of eligible) {
+    const employees = j.assigned_employees || [];
+    if (employees.length === 0) continue;
+    const lead = employees[0];
+    const id = lead.id;
+    const name = `${lead.first_name || ""} ${lead.last_name || ""}`.trim();
+    if (!byTech.has(id)) byTech.set(id, { name, jobs: [] });
+    byTech.get(id).jobs.push(j);
+  }
+
+  const rows = [];
+  for (const [empId, { name, jobs }] of byTech.entries()) {
+    if (jobs.length < 3) continue;
+    rows.push(rollupTech(empId, name, jobs));
+  }
+  rows.sort((a, b) => (b.overallPct ?? 0) - (a.overallPct ?? 0));
+  return rows;
+}
+
+export async function getHygieneStats() {
+  const [last7, last30] = await Promise.all([
+    computeHygieneForWindow({ daysBack: 7 }),
+    computeHygieneForWindow({ daysBack: 30 }),
+  ]);
+
+  // Apply the name override (e.g. R Kevin → Kevin) for display
+  function shorten(name) {
+    const lastSpace = name.lastIndexOf(" ");
+    const firstField = lastSpace > 0 ? name.slice(0, lastSpace) : name;
+    const last = lastSpace > 0 ? name.slice(lastSpace + 1) : "";
+    const overridden = overrideFirstName(firstField);
+    const firstWord = overridden.split(/\s+/)[0] || overridden;
+    return last ? `${firstWord} ${last}` : firstWord;
+  }
+  for (const r of last7) r.displayName = shorten(r.name);
+  for (const r of last30) r.displayName = shorten(r.name);
+
+  // Identify this week's leader (highest overall, must have ≥5 jobs in last 7 days)
+  const eligibleLeaders = last7.filter(r => r.totalJobs >= 5);
+  const leader = eligibleLeaders.length > 0 ? eligibleLeaders[0] : null;
+
+  // Identify any tech below 80% in the 30-day window
+  const flagged = last30.filter(r => r.overallPct !== null && r.overallPct < 80);
+
+  return { last7, last30, leader, flagged };
+}
