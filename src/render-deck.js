@@ -901,8 +901,11 @@ export async function renderDeck(data, outputPath) {
     const labelStr = labelFor(i);
     switch (item.key) {
       case "cover":
-        buildCoverSlide(s, pres, icons, { weekHumanLabel: data.weekOf.humanLabel });
-        break;
+  buildCoverSlide(s, pres, icons, {
+    weekHumanLabel: data.weekOf.humanLabel,
+    onCall: data.onCall,
+  });
+  break;
       case "oncall":
         await buildOnCallSlide(s, pres, icons, { onCall: data.onCall }, labelStr);
         break;
