@@ -8,7 +8,7 @@ import {
   FaPhone, FaCalendarAlt, FaBoxOpen, FaExchangeAlt,
   FaExclamationTriangle, FaTrophy, FaClipboardList,
   FaWrench, FaTruck, FaHardHat, FaBell, FaStar, FaArrowRight,
-  FaMapMarkerAlt, FaShieldAlt, FaFire, FaEnvelope, FaStopwatch,
+  FaMapMarkerAlt, FaShieldAlt, FaFire, FaEnvelope,
 } from "react-icons/fa";
 
 // ---------- Brand palette ----------
@@ -129,19 +129,16 @@ function addFooter(slide, pres, slideLabel) {
 function buildCoverSlide(s, _pres, _icons, { weekHumanLabel, onCall }) {
   s.background = { color: NAVY_DARK };
 
-  // Top thin yellow stripe
   s.addShape("rect", {
     x: 0, y: 0, w: 13.333, h: 0.12,
     fill: { color: YELLOW }, line: { color: YELLOW }
   });
 
-  // Bottom yellow stripe — holds dispatch + material runs
   s.addShape("rect", {
     x: -1, y: 6.4, w: 15, h: 1.1,
     fill: { color: YELLOW }, line: { color: YELLOW }
   });
 
-  // Logo (left side)
   if (logoDataUri) {
     s.addImage({ data: logoDataUri, x: 0.6, y: 1.8, w: 3.6, h: 2.13 });
   } else {
@@ -152,14 +149,12 @@ function buildCoverSlide(s, _pres, _icons, { weekHumanLabel, onCall }) {
     });
   }
 
-  // Top tag
   s.addText("GOLDEN RULE PLUMBING & CONTRACTING", {
     x: 0.6, y: 0.9, w: 12, h: 0.4,
     fontFace: "Arial", fontSize: 14, color: STEEL_LIGHT, bold: true,
     valign: "middle", margin: 0, charSpacing: 4
   });
 
-  // Headline (right side)
   s.addText("SHOP", {
     x: 4.5, y: 1.3, w: 8.3, h: 1.2,
     fontFace: "Arial Black", fontSize: 90, color: WHITE, bold: true,
@@ -183,7 +178,6 @@ function buildCoverSlide(s, _pres, _icons, { weekHumanLabel, onCall }) {
     valign: "middle", margin: 0, charSpacing: 3
   });
 
-  // Bottom yellow bar text
   const dispatcher = onCall?.dispatcher || "[ NOT SET ]";
   const materialRuns = onCall?.materialRuns || "[ NOT SET ]";
   s.addText(
@@ -588,6 +582,81 @@ function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
   addFooter(s, pres, slideLabel);
 }
 
+function buildTagDurationsSlide(s, pres, icons, { tagDurations }, slideLabel) {
+  s.background = { color: STEEL_LIGHT };
+  addHeaderBar(s, pres, "AVERAGE JOB TIME — BY CATEGORY", icons.clipboard);
+
+  s.addText("MEDIAN DURATION OF COMPLETED JOBS — LAST 30 DAYS", {
+    x: 0.5, y: 1.05, w: 12.3, h: 0.45,
+    fontFace: "Arial", fontSize: 13, color: GRAY_MUTED, bold: true,
+    valign: "middle", margin: 0, charSpacing: 2
+  });
+
+  const colW = 6.0;
+  const colGap = 0.33;
+  const rowH = 1.1;
+  const startY = 1.7;
+  const leftX = 0.5;
+  const rightX = leftX + colW + colGap;
+
+  const rows = (tagDurations || []).slice(0, 8);
+
+  for (let i = 0; i < 8; i++) {
+    const r = rows[i] || null;
+    const col = i % 2;
+    const rowIdx = Math.floor(i / 2);
+    const x = col === 0 ? leftX : rightX;
+    const y = startY + rowIdx * (rowH + 0.15);
+
+    s.addShape("rect", {
+      x, y, w: colW, h: rowH,
+      fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
+      shadow: { type: "outer", color: "000000", blur: 6, offset: 2, angle: 90, opacity: 0.06 }
+    });
+
+    s.addShape("rect", {
+      x, y, w: 0.14, h: rowH,
+      fill: { color: YELLOW }, line: { color: YELLOW }
+    });
+
+    if (r) {
+      s.addText(r.tag.toUpperCase(), {
+        x: x + 0.35, y: y + 0.15, w: colW * 0.55, h: rowH - 0.3,
+        fontFace: "Arial Black", fontSize: 18, color: NAVY_DARK, bold: true,
+        valign: "middle", margin: 0
+      });
+
+      s.addText(r.medianLabel, {
+        x: x + colW * 0.55, y: y + 0.1, w: colW * 0.3, h: rowH - 0.2,
+        fontFace: "Arial Black", fontSize: 24, color: NAVY_DARK, bold: true,
+        align: "right", valign: "middle", margin: 0
+      });
+
+      s.addText(`n = ${r.sampleCount}`, {
+        x: x + colW * 0.55, y: y + 0.65, w: colW * 0.4, h: 0.35,
+        fontFace: "Arial", fontSize: 10, color: GRAY_MUTED, bold: true,
+        align: "right", valign: "middle", margin: 0, charSpacing: 1
+      });
+    } else {
+      s.addText("—", {
+        x: x + 0.35, y, w: colW - 0.5, h: rowH,
+        fontFace: "Arial", fontSize: 14, color: GRAY_MUTED,
+        valign: "middle", margin: 0
+      });
+    }
+  }
+
+  s.addShape("rect", { x: 0.5, y: 6.55, w: 12.333, h: 0.5,
+    fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
+  s.addText("HITTING START + FINISH IN HCP IS WHAT MAKES THIS DATA POSSIBLE", {
+    x: 0.5, y: 6.55, w: 12.333, h: 0.5,
+    fontFace: "Arial Black", fontSize: 13, color: YELLOW, bold: true,
+    align: "center", valign: "middle", margin: 0, charSpacing: 2
+  });
+
+  addFooter(s, pres, slideLabel);
+}
+
 function buildSafetySlide(s, pres, icons, { safetyTopic }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "SAFETY & SHOP REMINDERS", icons.alert);
@@ -702,87 +771,6 @@ function buildShoutoutSlide(s, pres, icons, { shoutout }, slideLabel) {
   addFooter(s, pres, slideLabel);
 }
 
-function buildTagDurationsSlide(s, pres, icons, { tagDurations }, slideLabel) {
-  s.background = { color: STEEL_LIGHT };
-  addHeaderBar(s, pres, "AVERAGE JOB TIME — BY CATEGORY", icons.stopwatch);
-
-  const top = (tagDurations?.topTags || []);
-
-  // Subhead
-  const days = tagDurations?.windowDays || 30;
-  const total = tagDurations?.totalCompletedJobs || 0;
-  s.addText(`MEDIAN DURATION — LAST ${days} DAYS  •  ${total} COMPLETED JOBS`, {
-    x: 0.5, y: 1.05, w: 12.3, h: 0.45,
-    fontFace: "Arial", fontSize: 13, color: GRAY_MUTED, bold: true,
-    valign: "middle", margin: 0, charSpacing: 2
-  });
-
-  // Two columns of rows. 8 tags total → 4 per column.
-  const rowsPerCol = 4;
-  const colW = 6.0;
-  const colGap = 0.333;
-  const rowH = 1.25;
-  const startY = 1.65;
-
-  // Helper to draw one row
-  const drawRow = (x, y, rec) => {
-    // Card
-    s.addShape("rect", {
-      x, y, w: colW, h: rowH,
-      fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
-      shadow: { type: "outer", color: "000000", blur: 6, offset: 2, angle: 90, opacity: 0.06 }
-    });
-    // Yellow accent bar
-    s.addShape("rect", {
-      x, y, w: 0.14, h: rowH,
-      fill: { color: YELLOW }, line: { color: YELLOW }
-    });
-
-    if (!rec) {
-      s.addText("—", {
-        x: x + 0.3, y, w: colW - 0.5, h: rowH,
-        fontFace: "Arial", fontSize: 14, color: GRAY_MUTED, italic: true,
-        valign: "middle", margin: 0
-      });
-      return;
-    }
-
-    // Tag name (left)
-    s.addText(rec.tag.toUpperCase(), {
-      x: x + 0.3, y: y + 0.15, w: colW - 2.5, h: 0.55,
-      fontFace: "Arial Black", fontSize: 18, color: NAVY_DARK, bold: true,
-      valign: "middle", margin: 0
-    });
-    // Job count (left, smaller)
-    s.addText(`${rec.count} JOBS`, {
-      x: x + 0.3, y: y + 0.7, w: colW - 2.5, h: 0.4,
-      fontFace: "Arial", fontSize: 11, color: GRAY_MUTED, bold: true,
-      valign: "middle", margin: 0, charSpacing: 2
-    });
-    // Median duration (right, big)
-    s.addText(rec.medianLabel, {
-      x: x + colW - 2.3, y: y + 0.1, w: 2.1, h: rowH - 0.2,
-      fontFace: "Arial Black", fontSize: 30, color: NAVY_DARK, bold: true,
-      align: "right", valign: "middle", margin: 0
-    });
-  };
-
-  // Left column = top 4
-  for (let i = 0; i < rowsPerCol; i++) {
-    const x = 0.5;
-    const y = startY + i * (rowH + 0.12);
-    drawRow(x, y, top[i] || null);
-  }
-  // Right column = ranks 5-8
-  for (let i = 0; i < rowsPerCol; i++) {
-    const x = 0.5 + colW + colGap;
-    const y = startY + i * (rowH + 0.12);
-    drawRow(x, y, top[i + rowsPerCol] || null);
-  }
-
-  // Footnote
-  s.addText("Median is used to reduce skew from outliers (jobs left running, all-day pr
-
 function buildKPIsSlide(s, pres, icons, { kpis }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "WEEKLY GOALS & NUMBERS", icons.fire);
@@ -873,14 +861,14 @@ export async function renderDeck(data, outputPath) {
   };
 
   const plan = [];
-  plan.push({ key: "cover",      label: "COVER" });
-  plan.push({ key: "oncall",     label: "ON CALL" });
-  plan.push({ key: "events",     label: "EVENTS" });
-  plan.push({ key: "newitems",   label: "NEW ITEMS" });
-  plan.push({ key: "moveditems", label: "MOVED" });
+  plan.push({ key: "cover",        label: "COVER" });
+  plan.push({ key: "oncall",       label: "ON CALL" });
+  plan.push({ key: "events",       label: "EVENTS" });
+  plan.push({ key: "newitems",     label: "NEW ITEMS" });
+  plan.push({ key: "moveditems",   label: "MOVED" });
   plan.push({ key: "jobboard",     label: "JOB BOARD" });
   plan.push({ key: "tagdurations", label: "AVG TIMES" });
-  if (data.safetyTopic) plan.push({ key: "safety", label: "SAFETY" });
+  if (data.safetyTopic) plan.push({ key: "safety",   label: "SAFETY" });
   if (data.shoutout)    plan.push({ key: "shoutout", label: "SHOUTOUT" });
   plan.push({ key: "kpis",         label: "GOALS" });
 
