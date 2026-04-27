@@ -695,9 +695,9 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
   });
 
   const tableX = 0.5, tableW = 12.333;
-  const tableY = 1.6;
-  const headerH = 0.45;
-  const rowH = 0.4;
+  const tableY = 1.5;
+  const headerH = 0.4;
+  const rowH = 0.36;
   const visibleRows = Math.min(allRows.length, 11);
 
   const colTech = 2.4;
@@ -746,7 +746,7 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
   });
 
   const subY = tableY + headerH;
-  const subH = 0.28;
+  const subH = 0.26;
   s.addShape("rect", {
     x: tableX, y: subY, w: tableW, h: subH,
     fill: { color: STEEL_LIGHT }, line: { color: GRAY_LINE, width: 1 }
