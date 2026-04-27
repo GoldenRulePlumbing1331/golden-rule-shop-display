@@ -85,17 +85,6 @@ const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
     console.log(`  Reason: ${data.shoutout.reason}`);
   }
 
-  // ---- Slide 9: Birthdays & Anniversaries ----
-  console.log("\n[ Slide 9 — Birthdays & Anniversaries ]");
-  console.log(`  Month: ${data.birthdays.currentMonthLabel}`);
-  console.log(`  Birthdays: ${data.birthdays.birthdays.length}`);
-  for (const b of data.birthdays.birthdays) {
-    console.log(`    ${b.monthLabel} ${b.day}  ${b.name}`);
-  }
-  console.log(`  Anniversaries: ${data.birthdays.anniversaries.length}`);
-  for (const a of data.birthdays.anniversaries) {
-    console.log(`    ${a.years} yr  ${a.name}  (hired ${a.hireDate})`);
-  }
 
   // ---- Slide 10: KPIs ----
   console.log("\n[ Slide 10 — KPIs ]");
