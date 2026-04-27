@@ -1,8 +1,5 @@
-// Google Sheets and Calendar reader.
-// Authenticates as the service account using the JSON credential
-// stored in the GOOGLE_SERVICE_ACCOUNT_JSON env var.
-
 import { google } from "googleapis";
+import fs from "fs";
 
 let cachedAuth = null;
 
@@ -34,6 +31,7 @@ function getAuth() {
     scopes: [
       "https://www.googleapis.com/auth/spreadsheets.readonly",
       "https://www.googleapis.com/auth/calendar.readonly",
+      "https://www.googleapis.com/auth/drive.file",
     ],
   });
   return cachedAuth;
@@ -41,15 +39,13 @@ function getAuth() {
 
 // ---- Sheets ----
 
-// Read all rows from a tab. Returns an array of objects keyed by row 1 headers.
-// Empty rows are skipped.
 export async function readSheet(spreadsheetId, tabName) {
   const auth = await getAuth().getClient();
   const sheets = google.sheets({ version: "v4", auth });
 
   const resp = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${tabName}!A1:Z1000`, // generous bound; adjust if a tab ever exceeds this
+    range: `${tabName}!A1:Z1000`,
   });
 
   const rows = resp.data.values || [];
@@ -68,7 +64,7 @@ export async function readSheet(spreadsheetId, tabName) {
 }
 
 // ---- Calendar ----
-// (Stubbed for next round — we'll fill this in once Sheets is verified.)
+
 export async function readCalendarEvents(calendarId, { startISO, endISO } = {}) {
   const auth = await getAuth().getClient();
   const calendar = google.calendar({ version: "v3", auth });
@@ -83,4 +79,47 @@ export async function readCalendarEvents(calendarId, { startISO, endISO } = {}) 
   });
 
   return resp.data.items || [];
+}
+
+// ---- Drive ----
+
+// Uploads a file to a Drive folder. If a file with the same name already
+// exists in that folder (and was created by this bot), it's overwritten —
+// keeping only one "current" deck in the folder week to week.
+export async function uploadFileToDrive({ filePath, folderId, mimeType, displayName }) {
+  const auth = await getAuth().getClient();
+  const drive = google.drive({ version: "v3", auth });
+
+  const name = displayName || filePath.split("/").pop();
+
+  const existing = await drive.files.list({
+    q: `name = '${name.replace(/'/g, "\\'")}' and '${folderId}' in parents and trashed = false`,
+    fields: "files(id, name)",
+    spaces: "drive",
+  });
+
+  const media = {
+    mimeType,
+    body: fs.createReadStream(filePath),
+  };
+
+  if (existing.data.files && existing.data.files.length > 0) {
+    const fileId = existing.data.files[0].id;
+    const resp = await drive.files.update({
+      fileId,
+      media,
+      fields: "id, name, webViewLink",
+    });
+    return { ...resp.data, action: "updated" };
+  }
+
+  const resp = await drive.files.create({
+    requestBody: {
+      name,
+      parents: [folderId],
+    },
+    media,
+    fields: "id, name, webViewLink",
+  });
+  return { ...resp.data, action: "created" };
 }
