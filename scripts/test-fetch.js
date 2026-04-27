@@ -1,4 +1,8 @@
-import { getWeekJobs, groupByDay, pickMajorJobByDay } from "../src/jobs.js";
+import {
+  getWeekJobs, groupByDay, pickMajorJobByDay,
+  getCompletedJobsInRange, rollupKPIs,
+  getEmployeeRoster,
+} from "../src/jobs.js";
 
 function mondayOfThisWeek() {
   const now = new Date();
@@ -16,42 +20,48 @@ function addDays(d, n) {
 }
 
 (async () => {
-  const mon = mondayOfThisWeek();
-  const sun = addDays(mon, 7);
-  console.log(`=== Job Board preview ===`);
-  console.log(`Week of ${mon.toISOString().slice(0,10)}\n`);
+  const thisMon = mondayOfThisWeek();
+  const nextMon = addDays(thisMon, 7);
+  const lastMon = addDays(thisMon, -7);
 
-  const jobs = await getWeekJobs({
-    startISO: mon.toISOString(),
-    endISO: sun.toISOString(),
+  // ===== SLIDE 6 — Job Board (this week) =====
+  console.log(`=== Slide 6 — Job Board ===`);
+  console.log(`Week of ${thisMon.toISOString().slice(0,10)}\n`);
+
+  const weekJobs = await getWeekJobs({
+    startISO: thisMon.toISOString(),
+    endISO: nextMon.toISOString(),
   });
-  console.log(`Active scheduled jobs (cancelled/completed filtered): ${jobs.length}\n`);
+  console.log(`Active scheduled jobs: ${weekJobs.length}`);
 
-  const groups = groupByDay(jobs);
-  console.log("--- Counts by day ---");
-  for (const day of ["MON","TUE","WED","THU","FRI","SAT","SUN"]) {
-    console.log(`  ${day}: ${groups[day].length}`);
-  }
-
+  const groups = groupByDay(weekJobs);
   const majors = pickMajorJobByDay(groups);
-  console.log("\n--- Major job per weekday (this is what Slide 6 will show) ---");
   for (const day of ["MON","TUE","WED","THU","FRI"]) {
     const j = majors[day];
-    if (!j) {
-      console.log(`  ${day}:  (no scheduled work)`);
-      continue;
-    }
-    console.log(
-      `  ${day}  ${j.timeLabel?.padEnd(8)}  ${j.durationLabel.padEnd(9)}  ${j.techDisplay.padEnd(22)}  ${j.description.slice(0, 60)}`
-    );
+    if (!j) { console.log(`  ${day}:  (no scheduled work)`); continue; }
+    console.log(`  ${day}  ${(j.timeLabel||"").padEnd(8)}  ${j.durationLabel.padEnd(9)}  ${j.techDisplay.padEnd(22)}  ${j.description.slice(0, 60)}`);
   }
 
-  console.log(`\n--- Status breakdown (sanity check) ---`);
-  const statusCounts = {};
-  for (const j of jobs) {
-    statusCounts[j.workStatus] = (statusCounts[j.workStatus] || 0) + 1;
+  // ===== SLIDE 10 — KPI tiles (last week's completed jobs) =====
+  console.log(`\n=== Slide 10 — KPIs ===`);
+  console.log(`Looking at jobs scheduled ${lastMon.toISOString().slice(0,10)} → ${thisMon.toISOString().slice(0,10)}\n`);
+
+  const completedLastWeek = await getCompletedJobsInRange({
+    startISO: lastMon.toISOString(),
+    endISO: thisMon.toISOString(),
+  });
+  const kpis = rollupKPIs(completedLastWeek);
+  console.log(`  Jobs Closed:  ${kpis.jobsClosed}`);
+  console.log(`  Revenue:      ${kpis.revenueDisplay}`);
+  console.log(`  (raw dollars: ${kpis.revenueDollars})`);
+
+  // ===== Employee roster (for on-call lookup later) =====
+  console.log(`\n=== Employees on the account ===`);
+  const roster = await getEmployeeRoster();
+  console.log(`Total: ${roster.length}\n`);
+  for (const emp of roster) {
+    console.log(`  ${emp.fullName.padEnd(28)}  ${emp.role || "(no role)"}  ${emp.id}`);
   }
-  console.log(statusCounts);
 })().catch(err => {
   console.error("FAILED:", err.message);
   process.exit(1);
