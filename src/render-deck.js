@@ -878,10 +878,11 @@ export async function renderDeck(data, outputPath) {
   plan.push({ key: "events",     label: "EVENTS" });
   plan.push({ key: "newitems",   label: "NEW ITEMS" });
   plan.push({ key: "moveditems", label: "MOVED" });
-  plan.push({ key: "jobboard",   label: "JOB BOARD" });
+  plan.push({ key: "jobboard",     label: "JOB BOARD" });
+  plan.push({ key: "tagdurations", label: "AVG TIMES" });
   if (data.safetyTopic) plan.push({ key: "safety", label: "SAFETY" });
   if (data.shoutout)    plan.push({ key: "shoutout", label: "SHOUTOUT" });
-  plan.push({ key: "kpis",       label: "GOALS" });
+  plan.push({ key: "kpis",         label: "GOALS" });
 
   const totalNumbered = plan.length - 1;
   let numberedIndex = 0;
@@ -921,6 +922,9 @@ export async function renderDeck(data, outputPath) {
         break;
       case "jobboard":
         buildJobBoardSlide(s, pres, icons, { jobBoard: data.jobBoard }, labelStr);
+        break;
+      case "tagdurations":
+        buildTagDurationsSlide(s, pres, icons, { tagDurations: data.tagDurations }, labelStr);
         break;
       case "safety":
         buildSafetySlide(s, pres, icons, { safetyTopic: data.safetyTopic }, labelStr);
