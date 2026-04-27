@@ -132,7 +132,7 @@ function buildCSS() {
     }
     .slide.active { opacity: 1; pointer-events: auto; z-index: 2; }
 
-    /* Header bar (top) */
+    /* Header bar */
     .header-bar {
       position: absolute;
       top: 0; left: 0; right: 0;
@@ -168,7 +168,7 @@ function buildCSS() {
     .header-bar .brand .gr { color: ${COLORS.YELLOW}; font-weight: bold; }
     .header-bar .brand .pc { color: ${COLORS.WHITE}; }
 
-    /* Footer bar (bottom) */
+    /* Footer bar */
     .footer-bar {
       position: absolute;
       left: 0; right: 0; bottom: 0;
@@ -275,120 +275,133 @@ function buildCSS() {
       z-index: 3;
     }
 
-    /* Generic slide body padding to allow for header */
     .slide-body {
       position: absolute;
       top: 11.3%; left: 0; right: 0; bottom: 4.7%;
     }
 
-    /* On Call */
-    .oncall .left-card, .oncall .right-card {
+    /* On Call — split into THIS WEEK / NEXT WEEK */
+    .oncall .card {
       position: absolute;
       top: 1.2%;
       width: 45%;
       height: 87%;
+      padding: 3%;
+      overflow: hidden;
     }
-    .oncall .left-card {
+    .oncall .card.this-week {
       left: 3.75%;
       background: ${COLORS.NAVY_DARK};
-      padding: 3%;
     }
-    .oncall .left-card::before {
+    .oncall .card.next-week {
+      right: 3.75%;
+      background: ${COLORS.WHITE};
+      border: 1px solid ${COLORS.GRAY_LINE};
+    }
+    .oncall .card .top-stripe {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3%;
+    }
+    .oncall .card.this-week .top-stripe { background: ${COLORS.YELLOW}; }
+    .oncall .card.next-week .top-stripe { background: ${COLORS.NAVY_DARK}; }
+    .oncall .card.this-week::before {
       content: "";
       position: absolute;
       left: 0; top: 0; bottom: 0;
       width: 2.3%;
       background: ${COLORS.YELLOW};
     }
-    .oncall .right-card {
-      right: 3.75%;
-      background: ${COLORS.YELLOW};
+    .oncall .week-label {
+      font-size: 1.2vw;
+      font-weight: bold;
+      letter-spacing: 0.16em;
+      margin-bottom: 2%;
+      margin-top: 1.5%;
+    }
+    .oncall .card.this-week .week-label { color: ${COLORS.YELLOW}; }
+    .oncall .card.next-week .week-label { color: ${COLORS.NAVY}; }
+
+    .oncall .role-label {
+      font-size: 0.9vw;
+      font-weight: bold;
+      letter-spacing: 0.16em;
+      margin-bottom: 0.5%;
+    }
+    .oncall .card.this-week .role-label { color: ${COLORS.STEEL_LIGHT}; }
+    .oncall .card.next-week .role-label { color: ${COLORS.GRAY_TEXT}; }
+
+    .oncall .name {
+      font-family: 'Arial Black', sans-serif;
+      font-size: 3vw;
+      font-weight: 900;
+      line-height: 1.05;
+      margin-bottom: 4%;
+    }
+    .oncall .card.this-week .name { color: ${COLORS.WHITE}; }
+    .oncall .card.next-week .name { color: ${COLORS.NAVY_DARK}; }
+
+    .oncall .contact-row {
+      font-size: 1.2vw;
+      font-weight: bold;
+      margin-bottom: 0.8%;
+    }
+    .oncall .email-row {
+      font-size: 1vw;
+      margin-bottom: 4%;
+    }
+    .oncall .card.this-week .contact-row,
+    .oncall .card.this-week .email-row { color: ${COLORS.WHITE}; }
+    .oncall .card.next-week .contact-row,
+    .oncall .card.next-week .email-row { color: ${COLORS.NAVY_DARK}; }
+
+    .oncall .divider {
+      margin: 2% 0;
+    }
+    .oncall .card.this-week .divider { border-top: 1px solid ${COLORS.STEEL}; }
+    .oncall .card.next-week .divider { border-top: 1px solid ${COLORS.GRAY_LINE}; }
+
+    .oncall .field-label {
+      font-size: 0.85vw;
+      font-weight: bold;
+      letter-spacing: 0.16em;
+      margin-bottom: 0.4%;
+      margin-top: 2.5%;
+    }
+    .oncall .card.this-week .field-label { color: ${COLORS.YELLOW}; }
+    .oncall .card.next-week .field-label { color: ${COLORS.NAVY}; }
+
+    .oncall .field-value {
+      font-family: 'Arial Black', sans-serif;
+      font-size: 1.8vw;
+      font-weight: 900;
+    }
+    .oncall .card.this-week .field-value { color: ${COLORS.WHITE}; }
+    .oncall .card.next-week .field-value { color: ${COLORS.NAVY_DARK}; }
+
+    .oncall .placeholder {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 3%;
+      height: 70%;
+      text-align: center;
     }
-    .oncall .label {
-      color: ${COLORS.YELLOW};
-      font-size: 1.1vw;
-      font-weight: bold;
-      letter-spacing: 0.12em;
-      margin-bottom: 0.8%;
-    }
-    .oncall .name {
+    .oncall .placeholder-text {
       font-family: 'Arial Black', sans-serif;
-      color: ${COLORS.WHITE};
-      font-size: 4vw;
+      font-size: 2.2vw;
       font-weight: 900;
-      margin-bottom: 6%;
-      line-height: 1.05;
-    }
-    .oncall .contact-row {
-      color: ${COLORS.WHITE};
-      font-size: 1.4vw;
-      font-weight: bold;
+      letter-spacing: 0.06em;
       margin-bottom: 1%;
     }
-    .oncall .email-row {
-      color: ${COLORS.WHITE};
-      font-size: 1.1vw;
-      margin-bottom: 4%;
-    }
-    .oncall .divider {
-      border-top: 1px solid ${COLORS.STEEL};
-      margin: 3% 0;
-    }
-    .oncall .dispatch-label {
-      color: ${COLORS.YELLOW};
+    .oncall .card.this-week .placeholder-text { color: ${COLORS.STEEL_LIGHT}; }
+    .oncall .card.next-week .placeholder-text { color: ${COLORS.GRAY_MUTED}; }
+    .oncall .placeholder-sub {
       font-size: 1vw;
-      font-weight: bold;
-      letter-spacing: 0.12em;
-      margin-bottom: 0.5%;
-    }
-    .oncall .dispatch {
-      font-family: 'Arial Black', sans-serif;
-      color: ${COLORS.WHITE};
-      font-size: 2.6vw;
-      font-weight: 900;
-    }
-    .oncall .emergency-label {
-      font-family: 'Arial Black', sans-serif;
-      color: ${COLORS.NAVY_DARK};
-      font-size: 1.8vw;
-      font-weight: 900;
-      letter-spacing: 0.16em;
-      margin-bottom: 1%;
-    }
-    .oncall .emergency-num {
-      font-family: 'Arial Black', sans-serif;
-      color: ${COLORS.NAVY_DARK};
-      font-size: 4.2vw;
-      font-weight: 900;
-      margin-bottom: 1%;
-      white-space: nowrap;
-    }
-    .oncall .emergency-247 {
-      font-family: 'Arial Black', sans-serif;
-      color: ${COLORS.NAVY_DARK};
-      font-size: 5.5vw;
-      font-weight: 900;
-      letter-spacing: 0.2em;
-      margin-bottom: 1%;
-    }
-    .oncall .emergency-rule {
-      font-size: 1.3vw;
-      color: ${COLORS.NAVY_DARK};
-      font-weight: bold;
-      letter-spacing: 0.08em;
-      margin-top: 1.5%;
-    }
-    .oncall .emergency-tip {
-      font-size: 1.1vw;
-      color: ${COLORS.NAVY_DARK};
       font-style: italic;
-      margin-top: 0.5%;
     }
+    .oncall .card.this-week .placeholder-sub { color: ${COLORS.STEEL_LIGHT}; }
+    .oncall .card.next-week .placeholder-sub { color: ${COLORS.GRAY_MUTED}; }
 
     /* Events grid */
     .events-grid {
@@ -632,7 +645,7 @@ function buildCSS() {
       letter-spacing: 0.16em;
     }
 
-    /* Job Board */
+    /* Job Board — stretched rows + totals strip */
     .jobboard-left {
       position: absolute;
       top: 1%; left: 3.75%; bottom: 1%;
@@ -640,7 +653,9 @@ function buildCSS() {
       background: ${COLORS.WHITE};
       border: 1px solid ${COLORS.GRAY_LINE};
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      padding: 3%;
+      padding: 2.5%;
+      display: flex;
+      flex-direction: column;
     }
     .jobboard-left .header {
       font-family: 'Arial Black', sans-serif;
@@ -650,24 +665,31 @@ function buildCSS() {
       letter-spacing: 0.1em;
       padding-bottom: 1.5%;
       border-bottom: 3px solid ${COLORS.YELLOW};
+      flex-shrink: 0;
+    }
+    .jobboard-rows {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding-top: 1%;
     }
     .job-row {
+      flex: 1;
       display: flex;
       align-items: center;
-      padding: 1.8% 0;
       gap: 2%;
+      padding: 0 1%;
+      min-height: 0;
     }
     .job-row.alt {
       background: ${COLORS.STEEL_LIGHT};
-      margin: 0 -2%;
-      padding: 1.8% 2%;
     }
     .job-row .day-pill {
       width: 8%;
       background: ${COLORS.NAVY_DARK};
       color: ${COLORS.YELLOW};
       font-family: 'Arial Black', sans-serif;
-      font-size: 1vw;
+      font-size: 1.1vw;
       font-weight: 900;
       letter-spacing: 0.12em;
       text-align: center;
@@ -676,33 +698,71 @@ function buildCSS() {
     }
     .job-row .desc {
       flex: 1;
+      min-width: 0;
     }
     .job-row .desc .label {
       color: ${COLORS.GRAY_MUTED};
       font-size: 0.85vw;
       font-weight: bold;
       letter-spacing: 0.08em;
+      margin-bottom: 0.3%;
     }
     .job-row .desc .text {
       font-family: 'Arial Black', sans-serif;
       color: ${COLORS.NAVY_DARK};
-      font-size: 1.05vw;
+      font-size: 1.2vw;
       font-weight: 900;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .job-row .tech {
       width: 14%;
       color: ${COLORS.GRAY_TEXT};
-      font-size: 0.95vw;
+      font-size: 1vw;
       font-weight: bold;
       text-align: center;
     }
     .job-row .duration {
       width: 12%;
       color: ${COLORS.NAVY_DARK};
-      font-size: 1vw;
+      font-size: 1.1vw;
       font-weight: bold;
       text-align: right;
     }
+    .jobboard-totals {
+      flex-shrink: 0;
+      background: ${COLORS.NAVY_DARK};
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      padding: 1.5% 0;
+      margin-top: 1.5%;
+    }
+    .jobboard-totals .cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid ${COLORS.STEEL};
+      padding: 0.5% 0;
+    }
+    .jobboard-totals .cell:last-child {
+      border-right: none;
+    }
+    .jobboard-totals .cell .label {
+      color: ${COLORS.YELLOW};
+      font-size: 0.85vw;
+      font-weight: bold;
+      letter-spacing: 0.16em;
+      margin-bottom: 0.6%;
+    }
+    .jobboard-totals .cell .value {
+      font-family: 'Arial Black', sans-serif;
+      color: ${COLORS.WHITE};
+      font-size: 2vw;
+      font-weight: 900;
+    }
+
     .jobboard-right {
       position: absolute;
       top: 1%; right: 3.75%; bottom: 1%;
@@ -816,12 +876,7 @@ function buildCSS() {
       letter-spacing: 0.16em;
     }
 
-    /* ============================================================
-       Time Tracking — fully restructured table
-       Top header (Tech | 30 days | 7 days | # jobs)  → 5%
-       Sub-header (the OMW/START/FINISH labels)       → 3.5%
-       Body rows                                      → flex
-       ============================================================ */
+    /* Time Tracking */
     .tt-table {
       position: absolute;
       top: 6%; left: 3.75%; right: 3.75%; bottom: 9%;
@@ -1106,7 +1161,7 @@ function buildCSS() {
       line-height: 1.4;
     }
 
-    /* KPIs / Goals — restructured for proper bar chart layout */
+    /* KPIs / Goals */
     .kpi-tiles {
       position: absolute;
       top: 1.5%; left: 3.75%; right: 3.75%;
@@ -1232,8 +1287,8 @@ function htmlFooter(slideLabel) {
 }
 
 function buildCoverSlideHTML({ weekHumanLabel, onCall }) {
-  const dispatcher = onCall?.dispatcher || "[ NOT SET ]";
-  const materialRuns = onCall?.materialRuns || "[ NOT SET ]";
+  const dispatcher = onCall?.current?.dispatcher || "[ NOT SET ]";
+  const materialRuns = onCall?.current?.materialRuns || "[ NOT SET ]";
   const logoBg = logoDataUri ? `style="background-image: url('${logoDataUri}');"` : "";
   return `
     <div class="cover">
@@ -1253,29 +1308,44 @@ function buildCoverSlideHTML({ weekHumanLabel, onCall }) {
   `;
 }
 
+// On Call slide — split into THIS WEEK / NEXT WEEK
 function buildOnCallSlideHTML({ onCall }, slideLabel) {
-  const techName = onCall?.primaryName || "[ NOT SET ]";
-  const phone = formatPhone(onCall?.primaryMobile) || "(no number on file)";
-  const email = onCall?.primaryEmail || "(no email on file)";
-  const dispatcher = onCall?.dispatcher || "[ NOT SET ]";
+  const renderCardBody = (entry) => {
+    if (!entry) {
+      return `
+        <div class="placeholder">
+          <div class="placeholder-text">NOT YET<br>SCHEDULED</div>
+          <div class="placeholder-sub">Add to the on_call_rotation sheet</div>
+        </div>
+      `;
+    }
+    const phone = formatPhone(entry.primaryMobile) || "(no number on file)";
+    const email = entry.primaryEmail || "(no email on file)";
+    return `
+      <div class="role-label">PRIMARY TECH</div>
+      <div class="name">${escapeHtml(entry.primaryName)}</div>
+      <div class="contact-row">📞 ${escapeHtml(phone)}</div>
+      <div class="email-row">✉ ${escapeHtml(email)}</div>
+      <div class="divider"></div>
+      <div class="field-label">DISPATCH / OFFICE</div>
+      <div class="field-value">${escapeHtml(entry.dispatcher || "—")}</div>
+      <div class="field-label">MATERIAL RUNS</div>
+      <div class="field-value">${escapeHtml(entry.materialRuns || "—")}</div>
+    `;
+  };
+
   return `
-    ${htmlHeader("ON CALL THIS WEEK")}
+    ${htmlHeader("ON CALL")}
     <div class="slide-body oncall">
-      <div class="left-card">
-        <div class="label">PRIMARY TECH</div>
-        <div class="name">${escapeHtml(techName)}</div>
-        <div class="contact-row">📞 ${escapeHtml(phone)}</div>
-        <div class="email-row">✉ ${escapeHtml(email)}</div>
-        <div class="divider"></div>
-        <div class="dispatch-label">DISPATCH / OFFICE</div>
-        <div class="dispatch">${escapeHtml(dispatcher)}</div>
+      <div class="card this-week">
+        <div class="top-stripe"></div>
+        <div class="week-label">THIS WEEK</div>
+        ${renderCardBody(onCall?.current)}
       </div>
-      <div class="right-card">
-        <div class="emergency-label">EMERGENCY LINE</div>
-        <div class="emergency-num">(610) 269-0299</div>
-        <div class="emergency-247">24 / 7</div>
-        <div class="emergency-rule">ANSWER WITHIN 3 RINGS</div>
-        <div class="emergency-tip">Log every call in HCP before dispatch</div>
+      <div class="card next-week">
+        <div class="top-stripe"></div>
+        <div class="week-label">NEXT WEEK  —  HEADS UP</div>
+        ${renderCardBody(onCall?.next)}
       </div>
     </div>
     ${htmlFooter(slideLabel)}
@@ -1388,6 +1458,8 @@ function buildMovedItemsSlideHTML({ movedItems }, slideLabel) {
 function buildJobBoardSlideHTML({ jobBoard }, slideLabel) {
   const days = ["MON", "TUE", "WED", "THU", "FRI"];
   const counts = jobBoard?.counts || { open: 0, inProgress: 0, total: 0 };
+  const breakdown = jobBoard?.breakdown || { service: 0, install: 0, estimate: 0, other: 0 };
+
   const rowHTML = days.map((day, i) => {
     const j = jobBoard?.majors?.[day] || null;
     const altClass = i % 2 === 0 ? "alt" : "";
@@ -1403,12 +1475,31 @@ function buildJobBoardSlideHTML({ jobBoard }, slideLabel) {
       </div>
     `;
   }).join("");
+
   return `
     ${htmlHeader("THIS WEEK'S JOB BOARD")}
     <div class="slide-body">
       <div class="jobboard-left">
         <div class="header">MAJOR JOBS — THIS WEEK</div>
-        ${rowHTML}
+        <div class="jobboard-rows">${rowHTML}</div>
+        <div class="jobboard-totals">
+          <div class="cell">
+            <div class="label">SERVICE</div>
+            <div class="value">${breakdown.service}</div>
+          </div>
+          <div class="cell">
+            <div class="label">INSTALLS</div>
+            <div class="value">${breakdown.install}</div>
+          </div>
+          <div class="cell">
+            <div class="label">ESTIMATES</div>
+            <div class="value">${breakdown.estimate}</div>
+          </div>
+          <div class="cell">
+            <div class="label">OTHER</div>
+            <div class="value">${breakdown.other}</div>
+          </div>
+        </div>
       </div>
       <div class="jobboard-right">
         <div class="stat-card yellow">
@@ -1680,12 +1771,9 @@ function buildSlideshowJS(slidePlan, slideTimings) {
     function showSlide(idx) {
       slides.forEach((s, i) => s.classList.toggle('active', i === idx));
 
-      // Trigger chart render when KPIs slide becomes active.
-      // Re-render every time the slide becomes active so layout reflects current viewport.
       const slide = slides[idx];
       const canvas = slide.querySelector('canvas[data-chart]');
       if (canvas) {
-        // Defer to next frame so the slide's CSS transition / display has applied
         requestAnimationFrame(() => renderBarChart(canvas));
       }
 
@@ -1720,7 +1808,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
       }
     });
 
-    // Re-render charts on resize so they stay sharp when window dimensions change
     window.addEventListener('resize', () => {
       const activeCanvas = document.querySelector('.slide.active canvas[data-chart]');
       if (activeCanvas) renderBarChart(activeCanvas);
@@ -1730,7 +1817,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
       const data = JSON.parse(canvas.dataset.chart);
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
-      // If the canvas isn't yet laid out (rect is 0), skip — it'll re-render when active
       if (rect.width === 0 || rect.height === 0) return;
 
       canvas.width = rect.width * dpr;
@@ -1751,7 +1837,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
       const maxVal = Math.max(...values, 1);
       const yMax = Math.max(5, Math.ceil(maxVal / 5) * 5);
 
-      // Y-axis grid lines + labels
       ctx.strokeStyle = '${COLORS.GRAY_LINE}';
       ctx.fillStyle = '${COLORS.GRAY_TEXT}';
       ctx.lineWidth = 1;
@@ -1769,7 +1854,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
         ctx.fillText(String(v), padL - 8, y);
       }
 
-      // Bars
       const slot = plotW / values.length;
       const barW = slot * 0.7;
       const barOffset = slot * 0.15;
@@ -1780,7 +1864,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
         const y = padT + plotH - h;
         ctx.fillRect(x, y, barW, h);
 
-        // Value label
         if (h > 22) {
           ctx.fillStyle = '${COLORS.WHITE}';
           ctx.textAlign = 'center';
@@ -1797,7 +1880,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
         }
       }
 
-      // X-axis labels
       ctx.fillStyle = '${COLORS.GRAY_TEXT}';
       ctx.font = 'bold 11px Arial';
       ctx.textAlign = 'center';
