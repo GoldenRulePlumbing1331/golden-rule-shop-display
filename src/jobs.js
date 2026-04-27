@@ -70,7 +70,9 @@ function shapeJob(job) {
 
   return {
     id: job.id,
-    description: job.description || "(no description)",
+description: job.description
+  || job?.job_fields?.job_type?.name
+  || "Service call",
     workStatus: job.work_status,
     jobType: job?.job_fields?.job_type?.name || null,
     businessUnit: job?.job_fields?.business_unit?.name || null,
