@@ -1,14 +1,12 @@
 // Uploads a file to a GitHub release. Maintains a single "current" release
 // that gets re-uploaded to every Monday — gives the shop TV a stable URL.
-//
-// Auth: GITHUB_TOKEN env var, automatically provided by Actions.
 
 import fs from "fs";
 import path from "path";
 
 const RELEASE_TAG = "current";
 const RELEASE_NAME = "Current Shop Briefing";
-const RELEASE_BODY = "Auto-generated weekly. Download the .pptx below and open it on the shop TV.";
+const RELEASE_BODY = "Auto-generated weekly. The HTML link is the shop TV bookmark; the .pptx is a downloadable backup.";
 
 function api(endpoint, options = {}) {
   const token = process.env.GITHUB_TOKEN;
@@ -61,18 +59,20 @@ async function deleteAsset(assetId) {
   }
 }
 
-async function uploadAsset(release, filePath, displayName) {
+const PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+
+async function uploadAsset(release, filePath, displayName, contentType) {
   const name = displayName || path.basename(filePath);
   const fileBuf = fs.readFileSync(filePath);
+  const mime = contentType || PPTX_MIME;
 
-  // GitHub uses a separate upload endpoint
   const uploadUrl = release.upload_url.replace(/\{.*\}$/, "") + `?name=${encodeURIComponent(name)}`;
   const r = await fetch(uploadUrl, {
     method: "POST",
     headers: {
       "Accept": "application/vnd.github+json",
       "Authorization": `Bearer ${process.env.GITHUB_TOKEN}`,
-      "Content-Type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "Content-Type": mime,
       "Content-Length": String(fileBuf.length),
     },
     body: fileBuf,
@@ -81,7 +81,6 @@ async function uploadAsset(release, filePath, displayName) {
   return await r.json();
 }
 
-// Updates the release date in the body so it's clear when this was built
 async function updateReleaseBody(releaseId, weekHumanLabel) {
   const body = `${RELEASE_BODY}\n\n**Week of ${weekHumanLabel}**\n\nLast built: ${new Date().toISOString()}`;
   const r = await api(`/releases/${releaseId}`, {
@@ -93,7 +92,8 @@ async function updateReleaseBody(releaseId, weekHumanLabel) {
 }
 
 // Main entry — replace the current release's asset with a fresh upload.
-export async function publishToCurrentRelease({ filePath, displayName, weekHumanLabel }) {
+// Caller can specify contentType (default: pptx).
+export async function publishToCurrentRelease({ filePath, displayName, weekHumanLabel, contentType }) {
   let release = await findReleaseByTag(RELEASE_TAG);
   if (!release) {
     console.log("No 'current' release found — creating it");
@@ -102,7 +102,6 @@ export async function publishToCurrentRelease({ filePath, displayName, weekHuman
     console.log(`Found 'current' release (id ${release.id})`);
   }
 
-  // Delete any existing asset with the same name to avoid duplicates
   const targetName = displayName || path.basename(filePath);
   const existing = (release.assets || []).find(a => a.name === targetName);
   if (existing) {
@@ -111,7 +110,7 @@ export async function publishToCurrentRelease({ filePath, displayName, weekHuman
   }
 
   console.log(`  Uploading ${targetName}...`);
-  const asset = await uploadAsset(release, filePath, targetName);
+  const asset = await uploadAsset(release, filePath, targetName, contentType);
 
   if (weekHumanLabel) {
     await updateReleaseBody(release.id, weekHumanLabel);
