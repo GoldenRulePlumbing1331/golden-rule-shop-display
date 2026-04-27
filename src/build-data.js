@@ -249,44 +249,6 @@ async function buildShoutout(sheetId, roster) {
   };
 }
 
-async function buildBirthdaysAndAnniversaries(sheetId) {
-  const rows = await readSheet(sheetId, "birthdays");
-  const now = new Date();
-  const currentMonth = now.getUTCMonth() + 1;
-  const currentMonthLabel = new Intl.DateTimeFormat("en-US", { month: "long" }).format(now);
-
-  // Birthdays this month
-  const birthdays = rows
-    .filter(r => r.name && Number(r.month) === currentMonth)
-    .map(r => ({
-      name: r.name,
-      day: Number(r.day),
-      monthLabel: currentMonthLabel,
-    }))
-    .sort((a, b) => a.day - b.day);
-
-  // Anniversaries this month, with calculated years of service
-  const anniversaries = rows
-    .filter(r => r.name && r.hire_date)
-    .map(r => {
-      const hire = new Date(r.hire_date);
-      const hireMonth = hire.getUTCMonth() + 1;
-      if (hireMonth !== currentMonth) return null;
-      const years = now.getUTCFullYear() - hire.getUTCFullYear();
-      if (years <= 0) return null;
-      return {
-        name: r.name,
-        years,
-        hireDate: r.hire_date,
-        day: hire.getUTCDate(),
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.day - b.day);
-
-  return { birthdays, anniversaries, currentMonthLabel };
-}
-
 // ---------------------------------------------------------------------------
 // Main entry point
 // ---------------------------------------------------------------------------
@@ -333,11 +295,10 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
     movedItems:  movedItemsR.ok ? movedItemsR.data : [],
     safetyTopic: safetyR.ok ? safetyR.data : null,
     shoutout:    shoutoutR.ok ? shoutoutR.data : null,
-    birthdays:   bdayR.ok ? bdayR.data : { birthdays: [], anniversaries: [], currentMonthLabel: "" },
     rosterCount: roster.length,
     errors: [
       jobBoardR, kpisR, onCallR, eventsR,
-      newItemsR, movedItemsR, safetyR, shoutoutR, bdayR,
+      newItemsR, movedItemsR, safetyR, shoutoutR,
     ].filter(r => !r.ok).map(r => r.error),
   };
 }
