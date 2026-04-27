@@ -9,11 +9,12 @@ import {
   rollupKPIs,
   getEmployeeRoster,
   getTagDurations,
+  getHygieneStats,
 } from "./jobs.js";
 import { readSheet, readCalendarEvents } from "./google.js";
 
 // ---------------------------------------------------------------------------
-// Date helpers — week boundaries
+// Date helpers
 // ---------------------------------------------------------------------------
 
 export function mondayOf(date) {
@@ -37,7 +38,6 @@ function isoDateOnly(d) {
 }
 
 function fmtFullDateET(date) {
-  // Use the calendar date (no timezone shift) so we say "Monday" when we mean Monday.
   const isoDay = date.toISOString().slice(0, 10);
   const [y, m, d] = isoDay.split("-").map(Number);
   const localMidnight = new Date(y, m - 1, d);
@@ -50,7 +50,7 @@ function fmtFullDateET(date) {
 }
 
 // ---------------------------------------------------------------------------
-// Safe section wrapper — catches errors per section instead of crashing the whole build
+// Safe section wrapper
 // ---------------------------------------------------------------------------
 
 async function safe(label, fn) {
@@ -259,7 +259,7 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
 
   const [
     jobBoardR, kpisR, onCallR, eventsR,
-    newItemsR, movedItemsR, safetyR, shoutoutR, tagDurationsR,
+    newItemsR, movedItemsR, safetyR, shoutoutR, tagDurationsR, hygieneR,
   ] = await Promise.all([
     safe("job board", () => buildJobBoard(thisMon, nextMon)),
     safe("KPIs", () => buildKPIs(lastMon, thisMon)),
@@ -270,6 +270,7 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
     safe("safety topic", () => buildSafetyTopic(sheetId, thisMon)),
     safe("shoutout", () => buildShoutout(sheetId, roster)),
     safe("tag durations", () => getTagDurations({ daysBack: 30, topN: 8 })),
+    safe("hygiene", () => getHygieneStats()),
   ]);
 
   return {
@@ -286,10 +287,11 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
     safetyTopic:  safetyR.ok ? safetyR.data : null,
     shoutout:     shoutoutR.ok ? shoutoutR.data : null,
     tagDurations: tagDurationsR.ok ? tagDurationsR.data : [],
+    hygiene:      hygieneR.ok ? hygieneR.data : null,
     rosterCount: roster.length,
     errors: [
       jobBoardR, kpisR, onCallR, eventsR,
-      newItemsR, movedItemsR, safetyR, shoutoutR, tagDurationsR,
+      newItemsR, movedItemsR, safetyR, shoutoutR, tagDurationsR, hygieneR,
     ].filter(r => !r.ok).map(r => r.error),
   };
 }
