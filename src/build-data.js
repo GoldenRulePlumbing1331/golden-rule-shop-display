@@ -67,6 +67,29 @@ async function safe(label, fn) {
 }
 
 // ---------------------------------------------------------------------------
+// Job categorization for the totals strip
+// ---------------------------------------------------------------------------
+
+const INSTALL_TAGS = new Set([
+  "Water Heater", "Faucet Install", "Toilet Install", "Sink Install",
+  "RO install", "Repipe", "Excavation", "Sewer Line", "Main Water Line",
+  "Well Tank", "Well Pump", "Booster Pump", "Pipeline Automation",
+  "Garbage Disposal", "Bidet",
+]);
+
+function categorizeJob(job) {
+  const tags = (job.tags || []).map(t => typeof t === "string" ? t : (t.name || ""));
+  const hasTag = (set) => tags.some(t => set.has(t));
+
+  // Job type takes precedence if it's an estimate
+  const jobType = (job.jobType || "").toLowerCase();
+  if (jobType.includes("estimate")) return "estimate";
+
+  if (hasTag(INSTALL_TAGS)) return "install";
+  return "service";
+}
+
+// ---------------------------------------------------------------------------
 // Section builders
 // ---------------------------------------------------------------------------
 
@@ -84,11 +107,18 @@ async function buildJobBoard(thisMon, nextMon) {
     total: jobs.length,
   };
 
-  return { majors, counts };
+  // Totals strip — categorize all jobs on the board
+  const breakdown = { service: 0, install: 0, estimate: 0, other: 0 };
+  for (const j of jobs) {
+    const cat = categorizeJob(j);
+    if (breakdown[cat] !== undefined) breakdown[cat] += 1;
+    else breakdown.other += 1;
+  }
+
+  return { majors, counts, breakdown };
 }
 
 async function buildKPIs(lastMon, thisMon) {
-  // Pull all KPIs for last week's window in parallel
   const [completed, callbackCount, uncollected, byTech] = await Promise.all([
     getCompletedJobsInRange({
       startISO: lastMon.toISOString(),
@@ -116,23 +146,15 @@ async function buildKPIs(lastMon, thisMon) {
   };
 }
 
-async function buildOnCall(sheetId, roster) {
-  const rows = await readSheet(sheetId, "on_call_rotation");
-  if (rows.length === 0) return null;
-
-  const today = isoDateOnly(new Date());
-  const past = rows
-    .filter(r => r.week_start_date && r.week_start_date <= today)
-    .sort((a, b) => b.week_start_date.localeCompare(a.week_start_date));
-  const row = past[0];
+// Builds a single on-call entry from a sheet row.
+// Returns null if the row is missing or the tech can't be found.
+function buildOnCallEntry(row, roster) {
   if (!row) return null;
-
   const tech = roster.find(e => e.id === row.primary_employee_id);
   if (!tech) {
     console.warn(`[build-data] on-call: employee ID ${row.primary_employee_id} not found in roster`);
     return null;
   }
-
   return {
     weekStart: row.week_start_date,
     primaryName: tech.fullName,
@@ -140,6 +162,28 @@ async function buildOnCall(sheetId, roster) {
     primaryEmail: tech.email,
     dispatcher: row.dispatcher_name || "",
     materialRuns: row.material_runs_name || "",
+  };
+}
+
+async function buildOnCall(sheetId, roster, thisMon, nextMon) {
+  const rows = await readSheet(sheetId, "on_call_rotation");
+  if (rows.length === 0) return { current: null, next: null };
+
+  const today = isoDateOnly(new Date());
+  const nextMonISO = isoDateOnly(nextMon);
+
+  // Current week: most recent row with week_start_date <= today
+  const past = rows
+    .filter(r => r.week_start_date && r.week_start_date <= today)
+    .sort((a, b) => b.week_start_date.localeCompare(a.week_start_date));
+  const currentRow = past[0] || null;
+
+  // Next week: row whose week_start_date matches next Monday exactly
+  const nextRow = rows.find(r => r.week_start_date === nextMonISO) || null;
+
+  return {
+    current: buildOnCallEntry(currentRow, roster),
+    next: buildOnCallEntry(nextRow, roster),
   };
 }
 
@@ -287,7 +331,7 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
   ] = await Promise.all([
     safe("job board", () => buildJobBoard(thisMon, nextMon)),
     safe("KPIs", () => buildKPIs(lastMon, thisMon)),
-    safe("on-call", () => buildOnCall(sheetId, roster)),
+    safe("on-call", () => buildOnCall(sheetId, roster, thisMon, nextMon)),
     safe("events", () => buildEvents(sheetId, calendarId, thisMon)),
     safe("new items", () => buildNewItems(sheetId)),
     safe("moved items", () => buildMovedItems(sheetId)),
@@ -304,7 +348,7 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
     },
     jobBoard:     jobBoardR.ok ? jobBoardR.data : null,
     kpis:         kpisR.ok ? kpisR.data : null,
-    onCall:       onCallR.ok ? onCallR.data : null,
+    onCall:       onCallR.ok ? onCallR.data : { current: null, next: null },
     events:       eventsR.ok ? eventsR.data : [],
     newItems:     newItemsR.ok ? newItemsR.data : [],
     movedItems:   movedItemsR.ok ? movedItemsR.data : [],
