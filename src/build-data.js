@@ -39,13 +39,18 @@ function isoDateOnly(d) {
 }
 
 function fmtFullDateET(date) {
+  // The Monday timestamp we generate is at 00:00 UTC, which is 8 PM Sunday ET.
+  // Format using just the date parts (no timezone conversion) by working from the
+  // ISO date string. This guarantees we say "Monday" when we mean Monday.
+  const isoDay = date.toISOString().slice(0, 10); // YYYY-MM-DD
+  const [y, m, d] = isoDay.split("-").map(Number);
+  const localMidnight = new Date(y, m - 1, d); // local midnight of that calendar date
   return new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
     weekday: "long",
     month: "long",
     day: "numeric",
     year: "numeric",
-  }).format(date);
+  }).format(localMidnight);
 }
 
 // ---------------------------------------------------------------------------
