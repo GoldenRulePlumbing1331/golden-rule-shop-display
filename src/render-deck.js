@@ -2,6 +2,8 @@
 // Pure function: takes a `data` object (from build-data.js) and a target file path,
 // writes the .pptx, returns a summary.
 
+import fs from "fs";
+import path from "path";
 import pptxgen from "pptxgenjs";
 import React from "react";
 import ReactDOMServer from "react-dom/server";
@@ -121,13 +123,93 @@ function addFooter(slide, pres, slideLabel) {
 // ---------- Slide builders ----------
 // Each one takes a slide, the pres, prebuilt icons, and the relevant data slice.
 
-function buildCoverSlide(s, _pres, _icons, { weekHumanLabel }) {
+import fs from "fs";
+import path from "path";
+
+// Load the logo file once at module init. Path is relative to the repo root,
+// which is the working directory when the workflow runs.
+let logoDataUri = null;
+try {
+  const logoPath = path.resolve("assets/logo.png");
+  const buf = fs.readFileSync(logoPath);
+  logoDataUri = "image/png;base64," + buf.toString("base64");
+} catch (e) {
+  console.warn("[render-deck] Could not load assets/logo.png — cover will skip the logo. Error:", e.message);
+}
+
+function buildCoverSlide(s, _pres, _icons, { weekHumanLabel, onCall }) {
   s.background = { color: NAVY_DARK };
-  // Bottom yellow stripe
+
+  // Top thin yellow stripe
+  s.addShape("rect", {
+    x: 0, y: 0, w: 13.333, h: 0.12,
+    fill: { color: YELLOW }, line: { color: YELLOW }
+  });
+
+  // Bottom yellow stripe — now holds dispatch + material runs info
   s.addShape("rect", {
     x: -1, y: 6.4, w: 15, h: 1.1,
     fill: { color: YELLOW }, line: { color: YELLOW }
   });
+
+  // Logo (left side, replaces GR monogram)
+  if (logoDataUri) {
+    // Logo is 800×472 — aspect ~1.69:1. Put it in a 3.6"×2.13" slot on the left.
+    s.addImage({ data: logoDataUri, x: 0.6, y: 1.8, w: 3.6, h: 2.13 });
+  } else {
+    // Fallback if logo file is missing
+    s.addText("GOLDEN RULE", {
+      x: 0.6, y: 2.4, w: 3.6, h: 0.6,
+      fontFace: "Arial Black", fontSize: 24, color: YELLOW, bold: true,
+      align: "center", valign: "middle", margin: 0
+    });
+  }
+
+  // Top tag
+  s.addText("GOLDEN RULE PLUMBING & CONTRACTING", {
+    x: 0.6, y: 0.9, w: 12, h: 0.4,
+    fontFace: "Arial", fontSize: 14, color: STEEL_LIGHT, bold: true,
+    valign: "middle", margin: 0, charSpacing: 4
+  });
+
+  // Headline (right side)
+  s.addText("SHOP", {
+    x: 4.5, y: 1.3, w: 8.3, h: 1.2,
+    fontFace: "Arial Black", fontSize: 90, color: WHITE, bold: true,
+    valign: "middle", margin: 0, charSpacing: 4
+  });
+  s.addText("BRIEFING", {
+    x: 4.5, y: 2.4, w: 8.3, h: 1.2,
+    fontFace: "Arial Black", fontSize: 90, color: YELLOW, bold: true,
+    valign: "middle", margin: 0, charSpacing: 4
+  });
+
+  // Week of label
+  s.addText(`WEEK OF  ${weekHumanLabel.toUpperCase()}`, {
+    x: 4.5, y: 3.7, w: 8.3, h: 0.5,
+    fontFace: "Arial", fontSize: 22, color: STEEL_LIGHT, bold: true,
+    valign: "middle", margin: 0, charSpacing: 3
+  });
+
+  // Location tag
+  s.addText("WEST CHESTER, PA", {
+    x: 4.5, y: 4.4, w: 8.3, h: 0.4,
+    fontFace: "Arial", fontSize: 13, color: GRAY_MUTED, bold: true,
+    valign: "middle", margin: 0, charSpacing: 3
+  });
+
+  // Bottom yellow bar — Dispatch + Material Runs
+  const dispatcher = onCall?.dispatcher || "[ NOT SET ]";
+  const materialRuns = onCall?.materialRuns || "[ NOT SET ]";
+  s.addText(
+    `DISPATCH:  ${dispatcher.toUpperCase()}     |     MATERIAL RUNS:  ${materialRuns.toUpperCase()}`,
+    {
+      x: 0, y: 6.4, w: 13.333, h: 1.1,
+      fontFace: "Arial Black", fontSize: 28, color: NAVY_DARK, bold: true,
+      align: "center", valign: "middle", margin: 0, charSpacing: 2
+    }
+  );
+}
   // Top thin yellow stripe
   s.addShape("rect", {
     x: 0, y: 0, w: 13.333, h: 0.12,
