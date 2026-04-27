@@ -39,11 +39,12 @@ async function hcpFetch(path, params = {}) {
 }
 
 // Returns jobs scheduled between two ISO dates.
-export async function getScheduledJobs({ startISO, endISO, pageSize = 100 }) {
+export async function getScheduledJobs({ startISO, endISO, pageSize = 100, page = 1 }) {
   return hcpFetch("/jobs", {
     scheduled_start_min: startISO,
     scheduled_start_max: endISO,
     page_size: pageSize,
+    page,
   });
 }
 
