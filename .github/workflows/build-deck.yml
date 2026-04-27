@@ -2,6 +2,12 @@ name: Build deck
 
 on:
   workflow_dispatch:
+  schedule:
+    # Every Monday at 6:00 AM Eastern.
+    # GitHub Actions cron runs in UTC. 6 AM ET = 11 AM UTC standard time, 10 AM UTC daylight time.
+    # We schedule for both so the deck always lands by 6 AM local regardless of DST.
+    - cron: "0 11 * * MON"
+    - cron: "0 10 * * MON"
 
 jobs:
   build:
@@ -27,6 +33,7 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_SHEET_ID: ${{ vars.GOOGLE_SHEET_ID }}
           GOOGLE_CALENDAR_ID: ${{ vars.GOOGLE_CALENDAR_ID }}
+          GOOGLE_DRIVE_FOLDER_ID: ${{ vars.GOOGLE_DRIVE_FOLDER_ID }}
         run: npm run build-deck
 
       - name: Upload deck as artifact
