@@ -657,9 +657,9 @@ function buildTagDurationsSlide(s, pres, icons, { tagDurations }, slideLabel) {
   addFooter(s, pres, slideLabel);
 }
 
-function buildHygieneSlide(s, pres, icons, { hygiene }, slideLabel) {
+function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
-  addHeaderBar(s, pres, "TIMESTAMP HYGIENE — HCP BUTTONS", icons.bell);
+  addHeaderBar(s, pres, "TIME TRACKING — HCP BUTTONS", icons.bell);
 
   s.addText("ON MY WAY  /  START  /  FINISH  —  COMPLIANCE BY TECH", {
     x: 0.5, y: 1.05, w: 12.3, h: 0.45,
@@ -696,9 +696,9 @@ function buildHygieneSlide(s, pres, icons, { hygiene }, slideLabel) {
 
   const tableX = 0.5, tableW = 12.333;
   const tableY = 1.6;
-  const headerH = 0.5;
-  const rowH = 0.45;
-  const visibleRows = Math.min(allRows.length, 10);
+  const headerH = 0.45;
+  const rowH = 0.4;
+  const visibleRows = Math.min(allRows.length, 11);
 
   const colTech = 2.4;
   const col30Block = 4.4;
@@ -746,7 +746,7 @@ function buildHygieneSlide(s, pres, icons, { hygiene }, slideLabel) {
   });
 
   const subY = tableY + headerH;
-  const subH = 0.3;
+  const subH = 0.28;
   s.addShape("rect", {
     x: tableX, y: subY, w: tableW, h: subH,
     fill: { color: STEEL_LIGHT }, line: { color: GRAY_LINE, width: 1 }
@@ -814,7 +814,7 @@ function buildHygieneSlide(s, pres, icons, { hygiene }, slideLabel) {
         });
         s.addText(fmtPct(pcts[j]), {
           x: cx, y, w: cellW, h: rowH,
-          fontFace: "Arial Black", fontSize: 13, color: cellTextColor(pcts[j]), bold: true,
+          fontFace: "Arial Black", fontSize: 12, color: cellTextColor(pcts[j]), bold: true,
           align: "center", valign: "middle", margin: 0
         });
       }
@@ -978,61 +978,98 @@ function buildKPIsSlide(s, pres, icons, { kpis }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "WEEKLY GOALS & NUMBERS", icons.fire);
 
+  // Top row of 4 stat tiles
   const stats = [
-    { label: "JOBS CLOSED",   value: String(kpis?.jobsClosed ?? 0), sub: "LAST WEEK",   color: YELLOW },
-    { label: "REVENUE",       value: kpis?.revenueDisplay ?? "$0",  sub: "LAST WEEK",   color: GREEN_OK },
-    { label: "WEEK'S TOTAL",  value: "—",                           sub: "(reserved)",  color: NAVY_DARK },
-    { label: "AVG RESPONSE",  value: "—",                           sub: "(reserved)",  color: RED_ALERT },
+    { label: "JOBS CLOSED",  value: String(kpis?.jobsClosed ?? 0), sub: "LAST WEEK", color: YELLOW },
+    { label: "REVENUE",      value: kpis?.revenueDisplay ?? "$0",  sub: "LAST WEEK", color: GREEN_OK },
+    { label: "CALLBACKS",    value: String(kpis?.callbackCount ?? 0), sub: "LAST WEEK", color: RED_ALERT },
+    { label: "UNCOLLECTED",  value: kpis?.uncollected?.display ?? "$0",
+      sub: `${kpis?.uncollected?.count ?? 0} JOBS`, color: NAVY_DARK },
   ];
-  const tW = 2.95, tH = 2.3, tGap = 0.15;
+  const tW = 2.95, tH = 1.85, tGap = 0.15;
   const totalW = 4 * tW + 3 * tGap;
   const startX = (13.333 - totalW) / 2;
 
   for (let i = 0; i < stats.length; i++) {
     const st = stats[i];
     const x = startX + i * (tW + tGap);
-    const y = 1.2;
+    const y = 1.15;
     s.addShape("rect", { x, y, w: tW, h: tH,
       fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
       shadow: { type: "outer", color: "000000", blur: 8, offset: 2, angle: 90, opacity: 0.08 } });
     s.addShape("rect", { x, y, w: tW, h: 0.15, fill: { color: st.color }, line: { color: st.color } });
     s.addText(st.label, {
-      x: x + 0.2, y: y + 0.3, w: tW - 0.4, h: 0.35,
+      x: x + 0.2, y: y + 0.25, w: tW - 0.4, h: 0.35,
       fontFace: "Arial", fontSize: 11, color: GRAY_MUTED, bold: true,
       valign: "middle", margin: 0, charSpacing: 3
     });
     s.addText(st.value, {
-      x: x + 0.2, y: y + 0.7, w: tW - 0.4, h: 1.15,
-      fontFace: "Arial Black", fontSize: 40, color: NAVY_DARK, bold: true,
+      x: x + 0.2, y: y + 0.6, w: tW - 0.4, h: 0.85,
+      fontFace: "Arial Black", fontSize: 36, color: NAVY_DARK, bold: true,
       align: "center", valign: "middle", margin: 0
     });
     s.addText(st.sub, {
-      x: x + 0.2, y: y + 1.85, w: tW - 0.4, h: 0.3,
+      x: x + 0.2, y: y + 1.45, w: tW - 0.4, h: 0.3,
       fontFace: "Arial", fontSize: 10, color: GRAY_MUTED, bold: true,
       align: "center", valign: "middle", margin: 0, charSpacing: 2
     });
   }
 
-  s.addShape("rect", { x: 0.5, y: 3.85, w: 12.333, h: 3.15,
-    fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
-  s.addShape("rect", { x: 0.5, y: 3.85, w: 0.14, h: 3.15,
+  // Bottom: bar chart of jobs completed by tech
+  const chartY = 3.2;
+  const chartH = 3.65;
+
+  s.addShape("rect", { x: 0.5, y: chartY, w: 12.333, h: chartH,
+    fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
+    shadow: { type: "outer", color: "000000", blur: 8, offset: 2, angle: 90, opacity: 0.08 } });
+  s.addShape("rect", { x: 0.5, y: chartY, w: 12.333, h: 0.12,
     fill: { color: YELLOW }, line: { color: YELLOW } });
 
-  s.addText("THIS WEEK'S FOCUS", {
-    x: 0.9, y: 4.05, w: 6, h: 0.35,
-    fontFace: "Arial", fontSize: 12, color: YELLOW, bold: true,
-    valign: "middle", margin: 0, charSpacing: 3
-  });
-  s.addText("DO IT RIGHT THE FIRST TIME — CLOSE EVERY JOB IN HCP BEFORE LEAVING SITE", {
-    x: 0.9, y: 4.4, w: 12, h: 1.0,
-    fontFace: "Arial Black", fontSize: 22, color: WHITE, bold: true,
-    valign: "top", margin: 0
-  });
-  s.addText("KEEP THE PIPES FLOWING — ONE JOB AT A TIME", {
-    x: 0.9, y: 6.45, w: 12, h: 0.4,
-    fontFace: "Arial", fontSize: 13, color: YELLOW, italic: true, bold: true,
+  s.addText("JOBS COMPLETED BY TECHNICIAN  —  LAST WEEK", {
+    x: 0.7, y: chartY + 0.18, w: 12, h: 0.4,
+    fontFace: "Arial Black", fontSize: 14, color: NAVY_DARK, bold: true,
     valign: "middle", margin: 0, charSpacing: 2
   });
+
+  const byTech = kpis?.byTech || [];
+  if (byTech.length === 0) {
+    s.addText("(no completed jobs in window)", {
+      x: 0.5, y: chartY + 1.5, w: 12.333, h: 0.6,
+      fontFace: "Arial", fontSize: 16, color: GRAY_MUTED,
+      align: "center", valign: "middle", margin: 0
+    });
+  } else {
+    // Native pptxgenjs bar chart
+    const chartData = [{
+      name: "Jobs Completed",
+      labels: byTech.map(r => r.name),
+      values: byTech.map(r => r.count),
+    }];
+    s.addChart(pres.charts.BAR, chartData, {
+      x: 0.7, y: chartY + 0.65, w: 12, h: chartH - 0.85,
+      barDir: "col",
+      chartColors: [NAVY_DARK],
+      chartColorsOpacity: 100,
+      catAxisLabelColor: GRAY_TEXT,
+      catAxisLabelFontFace: "Arial",
+      catAxisLabelFontSize: 11,
+      catAxisLabelFontBold: true,
+      valAxisLabelColor: GRAY_TEXT,
+      valAxisLabelFontFace: "Arial",
+      valAxisLabelFontSize: 10,
+      showValue: true,
+      dataLabelColor: WHITE,
+      dataLabelFontFace: "Arial",
+      dataLabelFontSize: 11,
+      dataLabelFontBold: true,
+      dataLabelPosition: "ctr",
+      showLegend: false,
+      showTitle: false,
+      valGridLine: { style: "none" },
+      catGridLine: { style: "none" },
+      barGapWidthPct: 50,
+    });
+  }
 
   addFooter(s, pres, slideLabel);
 }
@@ -1071,7 +1108,7 @@ export async function renderDeck(data, outputPath) {
   plan.push({ key: "moveditems",   label: "MOVED" });
   plan.push({ key: "jobboard",     label: "JOB BOARD" });
   plan.push({ key: "tagdurations", label: "AVG TIMES" });
-  plan.push({ key: "hygiene",      label: "HYGIENE" });
+  plan.push({ key: "hygiene",      label: "TIME TRACKING" });
   if (data.safetyTopic) plan.push({ key: "safety",   label: "SAFETY" });
   if (data.shoutout)    plan.push({ key: "shoutout", label: "SHOUTOUT" });
   plan.push({ key: "kpis",         label: "GOALS" });
@@ -1119,7 +1156,7 @@ export async function renderDeck(data, outputPath) {
         buildTagDurationsSlide(s, pres, icons, { tagDurations: data.tagDurations }, labelStr);
         break;
       case "hygiene":
-        buildHygieneSlide(s, pres, icons, { hygiene: data.hygiene }, labelStr);
+        buildTimeTrackingSlide(s, pres, icons, { hygiene: data.hygiene }, labelStr);
         break;
       case "safety":
         buildSafetySlide(s, pres, icons, { safetyTopic: data.safetyTopic }, labelStr);
