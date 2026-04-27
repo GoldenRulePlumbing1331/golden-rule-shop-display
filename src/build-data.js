@@ -10,6 +10,9 @@ import {
   getEmployeeRoster,
   getTagDurations,
   getHygieneStats,
+  countCallbacksInRange,
+  getUncollectedSummary,
+  getCompletedByTech,
 } from "./jobs.js";
 import { readSheet, readCalendarEvents } from "./google.js";
 
@@ -85,11 +88,32 @@ async function buildJobBoard(thisMon, nextMon) {
 }
 
 async function buildKPIs(lastMon, thisMon) {
-  const completed = await getCompletedJobsInRange({
-    startISO: lastMon.toISOString(),
-    endISO: thisMon.toISOString(),
-  });
-  return rollupKPIs(completed);
+  // Pull all KPIs for last week's window in parallel
+  const [completed, callbackCount, uncollected, byTech] = await Promise.all([
+    getCompletedJobsInRange({
+      startISO: lastMon.toISOString(),
+      endISO: thisMon.toISOString(),
+    }),
+    countCallbacksInRange({
+      startISO: lastMon.toISOString(),
+      endISO: thisMon.toISOString(),
+    }),
+    getUncollectedSummary({
+      startISO: lastMon.toISOString(),
+      endISO: thisMon.toISOString(),
+    }),
+    getCompletedByTech({
+      startISO: lastMon.toISOString(),
+      endISO: thisMon.toISOString(),
+    }),
+  ]);
+
+  return {
+    ...rollupKPIs(completed),
+    callbackCount,
+    uncollected,
+    byTech,
+  };
 }
 
 async function buildOnCall(sheetId, roster) {
