@@ -1,54 +1,14 @@
 // Job-board data layer.
 // Pulls scheduled jobs for a week and shapes them for the shop display.
 
-import { getScheduledJobs } from "./hcp.js";
+import { getScheduledJobs, getJobsInRange, getEmployees } from "./hcp.js";
 import { overrideFirstName } from "./name-overrides.js";
-
-// Eastern Time helpers — Golden Rule is in PA, so the deck should reflect ET.
-// We don't need a full tz library; Intl.DateTimeFormat handles it.
 
 const ET = "America/New_York";
 
-function formatTechDisplay(names, maxChars = 28) {
-  if (!names || names.length === 0) return "[ UNASSIGNED ]";
-
-// Use first names only; first names + last initials get long fast on a crew of 3-4.
-  // The HCP first_name field is split on whitespace, then the override table is applied
-  // so e.g. "R Kevin" → "Kevin" instead of truncating to just "R".
-  const firsts = names.map(fullName => {
-    // The fullName here is "First Last" (built from HCP's first_name + last_name).
-    // We need the original first_name part, which is everything before the FINAL space.
-    // But our shapeJob already concatenated, so the safest thing is: take everything
-    // up to the last space as the "first name field", then run that through the override.
-    const lastSpace = fullName.lastIndexOf(" ");
-    const firstNameField = lastSpace > 0 ? fullName.slice(0, lastSpace) : fullName;
-    const overridden = overrideFirstName(firstNameField);
-    // Now apply our existing first-token rule to the (possibly overridden) value.
-    return (overridden.split(/\s+/)[0] || overridden).trim();
-  });
-
-  // Single tech — show the full first name.
-  if (firsts.length === 1) return firsts[0];
-
-  // Multi-tech — start with all of them, peel off the back if too long,
-  // and append "+N more" if we had to drop anyone.
-  let included = [...firsts];
-  let dropped = 0;
-
-  // Keep removing from the end until we fit.
-  // Format with no suffix first, then with "+N more" suffix once we drop one.
-  while (included.length > 1) {
-    const candidate = dropped === 0
-      ? included.join(", ")
-      : `${included.join(", ")} +${dropped}`;
-    if (candidate.length <= maxChars) return candidate;
-    included.pop();
-    dropped += 1;
-  }
-
-  // Worst case: even one name + suffix doesn't fit. Show first + count.
-  return `${included[0]} +${dropped}`;
-}
+// ---------------------------------------------------------------------------
+// Formatters
+// ---------------------------------------------------------------------------
 
 function fmtDayET(isoString) {
   if (!isoString) return null;
@@ -68,7 +28,6 @@ function fmtTimeET(isoString) {
 }
 
 function fmtDateET(isoString) {
-  // e.g. "Mon Apr 27"
   if (!isoString) return null;
   return new Intl.DateTimeFormat("en-US", {
     timeZone: ET,
@@ -78,13 +37,11 @@ function fmtDateET(isoString) {
   }).format(new Date(isoString));
 }
 
-// Minutes between two ISO timestamps; null if missing.
 function durationMinutes(startISO, endISO) {
   if (!startISO || !endISO) return null;
   return Math.round((new Date(endISO) - new Date(startISO)) / 60000);
 }
 
-// Human-readable duration, e.g. "1 hr", "2.5 hrs", "FULL DAY"
 function fmtDuration(mins) {
   if (mins == null) return "—";
   if (mins >= 7 * 60) return "FULL DAY";
@@ -95,7 +52,37 @@ function fmtDuration(mins) {
   return `${mins} min`;
 }
 
-// Take an HCP job and return only the fields the deck cares about.
+function formatTechDisplay(names, maxChars = 28) {
+  if (!names || names.length === 0) return "[ UNASSIGNED ]";
+
+  const firsts = names.map(fullName => {
+    const lastSpace = fullName.lastIndexOf(" ");
+    const firstNameField = lastSpace > 0 ? fullName.slice(0, lastSpace) : fullName;
+    const overridden = overrideFirstName(firstNameField);
+    return (overridden.split(/\s+/)[0] || overridden).trim();
+  });
+
+  if (firsts.length === 1) return firsts[0];
+
+  let included = [...firsts];
+  let dropped = 0;
+
+  while (included.length > 1) {
+    const candidate = dropped === 0
+      ? included.join(", ")
+      : `${included.join(", ")} +${dropped}`;
+    if (candidate.length <= maxChars) return candidate;
+    included.pop();
+    dropped += 1;
+  }
+
+  return `${included[0]} +${dropped}`;
+}
+
+// ---------------------------------------------------------------------------
+// Job shaping (active jobs)
+// ---------------------------------------------------------------------------
+
 function shapeJob(job) {
   const start = job?.schedule?.scheduled_start || null;
   const end = job?.schedule?.scheduled_end || null;
@@ -112,9 +99,9 @@ function shapeJob(job) {
 
   return {
     id: job.id,
-description: job.description
-  || job?.job_fields?.job_type?.name
-  || "Service call",
+    description: job.description
+      || job?.job_fields?.job_type?.name
+      || "Service call",
     workStatus: job.work_status,
     jobType: job?.job_fields?.job_type?.name || null,
     businessUnit: job?.job_fields?.business_unit?.name || null,
@@ -122,10 +109,10 @@ description: job.description
     scheduledEnd: end,
     durationMinutes: durationMinutes(start, end),
     durationLabel: fmtDuration(durationMinutes(start, end)),
-    dayLabel: fmtDayET(start),       // "MON"
-    timeLabel: fmtTimeET(start),     // "9:00 AM"
-    dateLabel: fmtDateET(start),     // "Mon Apr 27"
-    techNames,                       // ["John Smith"] — usually 0 or 1
+    dayLabel: fmtDayET(start),
+    timeLabel: fmtTimeET(start),
+    dateLabel: fmtDateET(start),
+    techNames,
     techDisplay: formatTechDisplay(techNames),
     customerName: [cust.first_name, cust.last_name].filter(Boolean).join(" ") || cust.company || "(no customer)",
     city: addr.city || null,
@@ -133,9 +120,6 @@ description: job.description
   };
 }
 
-// HCP work_status values we DON'T want on the Job Board.
-// Values seen in real data: 'scheduled', 'in progress', 'complete unrated',
-// 'user canceled', plus likely 'pro canceled', 'complete rated', 'needs scheduling'.
 const HIDE_STATUSES = new Set([
   "user canceled",
   "pro canceled",
@@ -150,10 +134,7 @@ function isOnBoard(job) {
   return !HIDE_STATUSES.has(job.workStatus);
 }
 
-// Pull all scheduled jobs in a date range, shape them, and filter.
 export async function getWeekJobs({ startISO, endISO }) {
-  // HCP paginates. Loop until we have them all.
-  // page_size max we trust: 100 (some forum reports say up to 500 but 100 is safe).
   const all = [];
   let page = 1;
   while (true) {
@@ -165,18 +146,16 @@ export async function getWeekJobs({ startISO, endISO }) {
     const totalPages = resp?.total_pages || 1;
     if (page >= totalPages) break;
     page += 1;
-    if (page > 20) break; // hard safety stop
+    if (page > 20) break;
   }
   return all.map(shapeJob).filter(isOnBoard);
 }
 
-// Group jobs by weekday: { MON: [...], TUE: [...], ... }
 export function groupByDay(shapedJobs) {
   const groups = { MON: [], TUE: [], WED: [], THU: [], FRI: [], SAT: [], SUN: [] };
   for (const j of shapedJobs) {
     if (groups[j.dayLabel]) groups[j.dayLabel].push(j);
   }
-  // Sort each day by start time
   for (const day of Object.keys(groups)) {
     groups[day].sort((a, b) =>
       (a.scheduledStart || "").localeCompare(b.scheduledStart || "")
@@ -185,8 +164,6 @@ export function groupByDay(shapedJobs) {
   return groups;
 }
 
-// Pick the "major job" for each weekday for slide 6 (Job Board).
-// Heuristic: longest scheduled duration. Ties → highest total_amount.
 export function pickMajorJobByDay(groups) {
   const out = {};
   for (const day of ["MON", "TUE", "WED", "THU", "FRI"]) {
@@ -204,11 +181,10 @@ export function pickMajorJobByDay(groups) {
   }
   return out;
 }
-// ---------------------------------------------------------------------------
-// Last-week completed jobs → for Slide 10 KPI tiles ("Jobs Closed", "Revenue WTD")
-// ---------------------------------------------------------------------------
 
-import { getJobsInRange, getEmployees } from "./hcp.js";
+// ---------------------------------------------------------------------------
+// Completed jobs and KPIs
+// ---------------------------------------------------------------------------
 
 const COMPLETE_STATUSES = new Set([
   "complete",
@@ -233,27 +209,25 @@ export async function getCompletedJobsInRange({ startISO, endISO }) {
     .filter(j => COMPLETE_STATUSES.has(j.workStatus));
 }
 
-// Roll up KPIs from a list of completed jobs.
 export function rollupKPIs(completedJobs) {
   const jobsClosed = completedJobs.length;
   const revenueCents = completedJobs.reduce((sum, j) => sum + (j.totalAmount || 0), 0);
   return {
     jobsClosed,
-    revenueDollars: Math.round(revenueCents / 100),  // for downstream math
-    revenueCents,                                    // raw, for debugging
-    revenueDisplay: formatRevenue(revenueCents),     // formatted string for the slide
+    revenueDollars: Math.round(revenueCents / 100),
+    revenueCents,
+    revenueDisplay: formatRevenue(revenueCents),
   };
 }
 
 function formatRevenue(amountCents) {
-  // HCP returns total_amount in CENTS (integer). Always divide by 100.
   if (!amountCents || amountCents < 0) return "$0";
   const dollars = amountCents / 100;
   return "$" + dollars.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
 
 // ---------------------------------------------------------------------------
-// Employees → for the on-call rotation lookup
+// Employees
 // ---------------------------------------------------------------------------
 
 export async function getEmployeeRoster() {
@@ -271,12 +245,9 @@ export async function getEmployeeRoster() {
 }
 
 // ---------------------------------------------------------------------------
-// Tag durations → for the "Average Job Time by Category" slide
+// Tag-based duration averages — for the "Average Job Time" slide
 // ---------------------------------------------------------------------------
 
-// Tags that describe relationships, supply, or admin states — NOT the type of
-// work performed. These are excluded from the duration averages because their
-// "average duration" doesn't carry useful signal.
 const NON_WORK_TAGS = new Set([
   // Customer relationship
   "New Customer", "Tenant", "Landlord", "Family/Friend", "Contractor",
@@ -285,67 +256,42 @@ const NON_WORK_TAGS = new Set([
   // Admin / lifecycle
   "Material Ordered", "Warranty", "Follow-up", "Final", "Walkout",
   "Bill From Shop", "Reconnect",
-  // Property/territory tags
+  // Place / community
   "BCWC Members", "Hersheys Mill", "Exton Station",
   // Tech routing
   "No Send: Kevin", "Requested: Donat", "Requested: Brett", "Requested: Dom",
-  // Service modes (not work types)
+  // Service mode (not a work type)
   "Emergency",
-  // Other admin
+  // Brands (descriptors, not jobs)
+  "Moen", "Rheem",
+  // Misc admin
   "Pipeline Automation",
 ]);
 
-function tagName(t) {
-  // HCP returns tags either as strings or as { name, ... } objects.
-  if (typeof t === "string") return t;
-  return t?.name || t?.label || null;
-}
-
-function median(numbers) {
-  if (!numbers || numbers.length === 0) return null;
-  const sorted = [...numbers].sort((a, b) => a - b);
+function median(arr) {
+  if (arr.length === 0) return null;
+  const sorted = [...arr].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 0) {
-    return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
-  }
-  return sorted[mid];
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
 }
 
-// Try actual times first (work_timestamps), fall back to scheduled.
-function jobDurationMinutes(rawJob) {
-  const startedAt = rawJob?.work_timestamps?.started_at;
-  const completedAt = rawJob?.work_timestamps?.completed_at;
-  if (startedAt && completedAt) {
-    const ms = new Date(completedAt) - new Date(startedAt);
-    if (ms > 0) return Math.round(ms / 60000);
-  }
-  const schedStart = rawJob?.schedule?.scheduled_start;
-  const schedEnd = rawJob?.schedule?.scheduled_end;
-  if (schedStart && schedEnd) {
-    const ms = new Date(schedEnd) - new Date(schedStart);
-    if (ms > 0) return Math.round(ms / 60000);
-  }
-  return null;
-}
-
-function fmtDurationMinutes(mins) {
+function fmtDurationShort(mins) {
   if (mins == null) return "—";
   if (mins >= 60) {
     const hrs = mins / 60;
     return Number.isInteger(hrs) ? `${hrs} hr` : `${hrs.toFixed(1)} hr`;
   }
-  return `${mins} min`;
+  return `${Math.round(mins)} min`;
 }
 
-// Pulls completed jobs in the last `days` days, computes median duration
-// by tag, returns the top N work-type tags sorted by job count.
-export async function getTagDurations({ days = 30, topN = 8 } = {}) {
+export async function getTagDurations({ daysBack = 30, topN = 8 } = {}) {
   const end = new Date();
-  const start = new Date(end);
-  start.setUTCDate(end.getUTCDate() - days);
+  const start = new Date();
+  start.setUTCDate(start.getUTCDate() - daysBack);
   start.setUTCHours(0, 0, 0, 0);
 
-  // Pull all completed jobs in the window
   const all = [];
   let page = 1;
   while (true) {
@@ -360,47 +306,52 @@ export async function getTagDurations({ days = 30, topN = 8 } = {}) {
     const totalPages = resp?.total_pages || 1;
     if (page >= totalPages) break;
     page += 1;
-    if (page > 30) break;
+    if (page > 20) break;
   }
 
-  const COMPLETE = new Set(["complete", "complete unrated", "complete rated"]);
-  const completed = all.filter(j => COMPLETE.has(j.work_status));
+  const completed = all.filter(j => COMPLETE_STATUSES.has(j.work_status));
 
-  // Group durations by tag
-  const byTag = new Map(); // tagName -> array of durations in minutes
+  function jobDurationMinutes(j) {
+    const startedAt = j.work_timestamps?.started_at;
+    const completedAt = j.work_timestamps?.completed_at;
+    const schedStart = j.schedule?.scheduled_start;
+    const schedEnd = j.schedule?.scheduled_end;
+    if (startedAt && completedAt) {
+      const ms = new Date(completedAt) - new Date(startedAt);
+      return ms > 0 ? ms / 60000 : null;
+    }
+    if (schedStart && schedEnd) {
+      const ms = new Date(schedEnd) - new Date(schedStart);
+      return ms > 0 ? ms / 60000 : null;
+    }
+    return null;
+  }
+
+  const byTag = new Map();
   for (const j of completed) {
     const dur = jobDurationMinutes(j);
-    if (dur == null || dur <= 0) continue;
-    // Cap implausibly long jobs — anything over 16 hours is almost certainly
-    // a "tech forgot to hit complete" data error rather than a real job duration.
-    if (dur > 16 * 60) continue;
-
-    const tags = (j.tags || []).map(tagName).filter(Boolean);
+    if (dur === null) continue;
+    const tags = j.tags || [];
     for (const t of tags) {
-      if (NON_WORK_TAGS.has(t)) continue;
-      if (!byTag.has(t)) byTag.set(t, []);
-      byTag.get(t).push(dur);
+      const tagName = typeof t === "string" ? t : (t.name || t.label || "");
+      if (!tagName) continue;
+      if (NON_WORK_TAGS.has(tagName)) continue;
+      if (!byTag.has(tagName)) byTag.set(tagName, []);
+      byTag.get(tagName).push(dur);
     }
   }
 
-  // Build summary records
-  const records = [];
-  for (const [tag, durs] of byTag.entries()) {
-    if (durs.length < 3) continue; // need at least 3 jobs to compute a meaningful median
-    const med = median(durs);
-    records.push({
+  const rows = [];
+  for (const [tag, durations] of byTag.entries()) {
+    if (durations.length < 3) continue;
+    const med = median(durations);
+    rows.push({
       tag,
-      count: durs.length,
-      medianMinutes: med,
-      medianLabel: fmtDurationMinutes(med),
+      sampleCount: durations.length,
+      medianMinutes: Math.round(med),
+      medianLabel: fmtDurationShort(med),
     });
   }
-
-  // Sort by job count desc, take top N
-  records.sort((a, b) => b.count - a.count);
-  return {
-    windowDays: days,
-    topTags: records.slice(0, topN),
-    totalCompletedJobs: completed.length,
-  };
+  rows.sort((a, b) => b.sampleCount - a.sampleCount);
+  return rows.slice(0, topN);
 }
