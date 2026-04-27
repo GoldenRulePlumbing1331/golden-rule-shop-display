@@ -3,11 +3,13 @@ name: Build deck
 on:
   workflow_dispatch:
   schedule:
-    # Every Monday at 6:00 AM Eastern.
-    # GitHub Actions cron runs in UTC. 6 AM ET = 11 AM UTC standard time, 10 AM UTC daylight time.
-    # We schedule for both so the deck always lands by 6 AM local regardless of DST.
+    # Every Monday 6 AM Eastern (covers both ET standard and DST)
     - cron: "0 11 * * MON"
     - cron: "0 10 * * MON"
+
+permissions:
+  # Required to create releases and upload assets
+  contents: write
 
 jobs:
   build:
@@ -27,16 +29,17 @@ jobs:
       - name: Make output directory
         run: mkdir -p output
 
-      - name: Build deck
+      - name: Build deck and publish release
         env:
           HCP_API_KEY: ${{ secrets.HCP_API_KEY }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_SHEET_ID: ${{ vars.GOOGLE_SHEET_ID }}
           GOOGLE_CALENDAR_ID: ${{ vars.GOOGLE_CALENDAR_ID }}
-          GOOGLE_DRIVE_FOLDER_ID: ${{ vars.GOOGLE_DRIVE_FOLDER_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: npm run build-deck
 
-      - name: Upload deck as artifact
+      - name: Upload deck as workflow artifact (backup)
         uses: actions/upload-artifact@v4
         with:
           name: shop-briefing-pptx
