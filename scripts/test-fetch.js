@@ -2,7 +2,7 @@ import { ping, getScheduledJobs } from "../src/hcp.js";
 
 function mondayOfThisWeek() {
   const now = new Date();
-  const day = now.getUTCDay(); // 0=Sun, 1=Mon, ...
+  const day = now.getUTCDay();
   const diff = (day === 0 ? -6 : 1 - day);
   const monday = new Date(now);
   monday.setUTCDate(now.getUTCDate() + diff);
@@ -21,9 +21,7 @@ function addDays(d, n) {
 
   console.log("\n1) Ping test (pulling 1 job)...");
   const pingResult = await ping();
-  const count = Array.isArray(pingResult?.jobs) ? pingResult.jobs.length : 0;
-  console.log(`   OK — received ${count} job(s). Keys returned:`,
-    Object.keys(pingResult || {}));
+  console.log(`   OK — top-level keys:`, Object.keys(pingResult || {}));
 
   console.log("\n2) Week-of-jobs test...");
   const mon = mondayOfThisWeek();
@@ -38,8 +36,14 @@ function addDays(d, n) {
 
   const jobs = weekJobs?.jobs || [];
   console.log(`   Received ${jobs.length} scheduled job(s) this week.`);
-  for (const j of jobs.slice(0, 5)) {
-    console.log(`   - ${j.scheduled_start || "?"}  |  ${j.description || j.work_status || "(no description)"}`);
+
+  // ---- DIAGNOSTIC: dump the full structure of the first job ----
+  if (jobs.length > 0) {
+    console.log("\n3) Full structure of first job (so we can find the right field names):");
+    console.log(JSON.stringify(jobs[0], null, 2));
+
+    console.log("\n4) Top-level keys on a job object:");
+    console.log(Object.keys(jobs[0]));
   }
 
   console.log("\n=== All good ===");
