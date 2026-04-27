@@ -101,7 +101,6 @@ async function buildOnCall(sheetId, roster) {
   const rows = await readSheet(sheetId, "on_call_rotation");
   if (rows.length === 0) return null;
 
-  // Pick the row whose week_start_date is the most recent one ≤ today.
   const today = isoDateOnly(new Date());
   const past = rows
     .filter(r => r.week_start_date && r.week_start_date <= today)
@@ -121,6 +120,7 @@ async function buildOnCall(sheetId, roster) {
     primaryMobile: tech.mobile,
     primaryEmail: tech.email,
     dispatcher: row.dispatcher_name || "",
+    materialRuns: row.material_runs_name || "",
   };
 }
 
