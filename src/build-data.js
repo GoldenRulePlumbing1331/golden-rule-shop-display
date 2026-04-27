@@ -1,8 +1,5 @@
 // The orchestrator. Pulls from HCP + Sheet + Calendar and assembles
 // a single `data` object that the deck generator will consume.
-//
-// Designed so each section can fail independently — if Calendar is down
-// for a minute we still build the deck with everything else.
 
 import {
   getWeekJobs,
@@ -16,7 +13,7 @@ import {
 import { readSheet, readCalendarEvents } from "./google.js";
 
 // ---------------------------------------------------------------------------
-// Date helpers — week boundaries, Eastern Time
+// Date helpers — week boundaries
 // ---------------------------------------------------------------------------
 
 export function mondayOf(date) {
@@ -40,12 +37,10 @@ function isoDateOnly(d) {
 }
 
 function fmtFullDateET(date) {
-  // The Monday timestamp we generate is at 00:00 UTC, which is 8 PM Sunday ET.
-  // Format using just the date parts (no timezone conversion) by working from the
-  // ISO date string. This guarantees we say "Monday" when we mean Monday.
-  const isoDay = date.toISOString().slice(0, 10); // YYYY-MM-DD
+  // Use the calendar date (no timezone shift) so we say "Monday" when we mean Monday.
+  const isoDay = date.toISOString().slice(0, 10);
   const [y, m, d] = isoDay.split("-").map(Number);
-  const localMidnight = new Date(y, m - 1, d); // local midnight of that calendar date
+  const localMidnight = new Date(y, m - 1, d);
   return new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     month: "long",
@@ -55,7 +50,7 @@ function fmtFullDateET(date) {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers for safe section building (catch-and-log instead of crashing)
+// Safe section wrapper — catches errors per section instead of crashing the whole build
 // ---------------------------------------------------------------------------
 
 async function safe(label, fn) {
@@ -69,7 +64,7 @@ async function safe(label, fn) {
 }
 
 // ---------------------------------------------------------------------------
-// Section builders — one per slide
+// Section builders
 // ---------------------------------------------------------------------------
 
 async function buildJobBoard(thisMon, nextMon) {
@@ -80,7 +75,6 @@ async function buildJobBoard(thisMon, nextMon) {
   const groups = groupByDay(jobs);
   const majors = pickMajorJobByDay(groups);
 
-  // Counts for the right-hand stat tiles
   const counts = {
     open: jobs.filter(j => j.workStatus === "scheduled").length,
     inProgress: jobs.filter(j => j.workStatus === "in progress").length,
@@ -129,7 +123,6 @@ async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 2) {
   const endRange = addDays(thisMon, 7 * weeksOut);
   const events = [];
 
-  // Calendar source
   try {
     const calEvents = await readCalendarEvents(calendarId, {
       startISO: thisMon.toISOString(),
@@ -143,21 +136,20 @@ async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 2) {
         startISO: start,
         title: e.summary || "(untitled)",
         location: e.location || "",
-        category: "MEETING", // calendar items don't carry a category; default
+        category: "MEETING",
       });
     }
   } catch (e) {
     console.warn(`[build-data] calendar fetch failed: ${e.message}`);
   }
 
-  // Sheet source — adds events with explicit categories the calendar can't express
   try {
     const sheetRows = await readSheet(sheetId, "events");
     for (const r of sheetRows) {
       if (!r.date) continue;
       events.push({
         source: "sheet",
-        startISO: r.date, // will be a YYYY-MM-DD string
+        startISO: r.date,
         title: r.title || "(untitled)",
         location: r.time_location || "",
         category: r.category || "MEETING",
@@ -168,14 +160,12 @@ async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 2) {
     console.warn(`[build-data] events sheet fetch failed: ${e.message}`);
   }
 
-  // Sort and trim to first N — the slide can show 4
   events.sort((a, b) => a.startISO.localeCompare(b.startISO));
   return events.slice(0, 4);
 }
 
 async function buildNewItems(sheetId) {
   const rows = await readSheet(sheetId, "new_items");
-  // Sort by added_date desc, take top 3
   return rows
     .filter(r => r.name)
     .sort((a, b) => (b.added_date || "").localeCompare(a.added_date || ""))
@@ -264,15 +254,12 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
 
   console.log(`[build-data] Building deck data for week of ${isoDateOnly(thisMon)}`);
 
-  // Roster comes first because on-call and shoutout both need it for name lookups
   const rosterResult = await safe("employee roster", () => getEmployeeRoster());
   const roster = rosterResult.ok ? rosterResult.data : [];
 
-  // Run independent sections in parallel
   const [
     jobBoardR, kpisR, onCallR, eventsR,
-    newItemsR, movedItemsR, safetyR, shoutoutR,
-    tagDurationsR,
+    newItemsR, movedItemsR, safetyR, shoutoutR, tagDurationsR,
   ] = await Promise.all([
     safe("job board", () => buildJobBoard(thisMon, nextMon)),
     safe("KPIs", () => buildKPIs(lastMon, thisMon)),
@@ -282,7 +269,7 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
     safe("moved items", () => buildMovedItems(sheetId)),
     safe("safety topic", () => buildSafetyTopic(sheetId, thisMon)),
     safe("shoutout", () => buildShoutout(sheetId, roster)),
-    safe("tag durations", () => getTagDurations({ days: 30, topN: 8 })),
+    safe("tag durations", () => getTagDurations({ daysBack: 30, topN: 8 })),
   ]);
 
   return {
@@ -298,10 +285,11 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
     movedItems:   movedItemsR.ok ? movedItemsR.data : [],
     safetyTopic:  safetyR.ok ? safetyR.data : null,
     shoutout:     shoutoutR.ok ? shoutoutR.data : null,
-    tagDurations: tagDurationsR.ok ? tagDurationsR.data : null,
-    rosterCount:  roster.length,
+    tagDurations: tagDurationsR.ok ? tagDurationsR.data : [],
+    rosterCount: roster.length,
     errors: [
       jobBoardR, kpisR, onCallR, eventsR,
       newItemsR, movedItemsR, safetyR, shoutoutR, tagDurationsR,
     ].filter(r => !r.ok).map(r => r.error),
   };
+}
