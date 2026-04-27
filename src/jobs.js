@@ -8,14 +8,33 @@ import { getScheduledJobs } from "./hcp.js";
 
 const ET = "America/New_York";
 
-function formatTechDisplay(names) {
+function formatTechDisplay(names, maxChars = 28) {
   if (!names || names.length === 0) return "[ UNASSIGNED ]";
-  if (names.length === 1) return names[0];
 
-  // For multi-tech jobs, show the lead's first+last and a "+N" suffix.
-  // This keeps the slide column readable.
-  const lead = names[0];
-  return `${lead}  +${names.length - 1}`;
+  // Use first names only; first names + last initials get long fast on a crew of 3-4.
+  const firsts = names.map(n => (n.split(/\s+/)[0] || n).trim());
+
+  // Single tech — show the full first name.
+  if (firsts.length === 1) return firsts[0];
+
+  // Multi-tech — start with all of them, peel off the back if too long,
+  // and append "+N more" if we had to drop anyone.
+  let included = [...firsts];
+  let dropped = 0;
+
+  // Keep removing from the end until we fit.
+  // Format with no suffix first, then with "+N more" suffix once we drop one.
+  while (included.length > 1) {
+    const candidate = dropped === 0
+      ? included.join(", ")
+      : `${included.join(", ")} +${dropped}`;
+    if (candidate.length <= maxChars) return candidate;
+    included.pop();
+    dropped += 1;
+  }
+
+  // Worst case: even one name + suffix doesn't fit. Show first + count.
+  return `${included[0]} +${dropped}`;
 }
 
 function fmtDayET(isoString) {
