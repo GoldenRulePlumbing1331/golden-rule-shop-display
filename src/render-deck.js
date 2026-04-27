@@ -1,7 +1,3 @@
-// Renders the weekly Golden Rule shop display deck.
-// Pure function: takes a `data` object (from build-data.js) and a target file path,
-// writes the .pptx, returns a summary.
-
 import fs from "fs";
 import path from "path";
 import pptxgen from "pptxgenjs";
@@ -15,7 +11,7 @@ import {
   FaMapMarkerAlt, FaShieldAlt, FaFire, FaEnvelope,
 } from "react-icons/fa";
 
-// ---------- Brand palette (mirrors the template) ----------
+// ---------- Brand palette ----------
 const NAVY_DARK   = "0F1E3A";
 const NAVY        = "1B3358";
 const STEEL       = "2C4A6B";
@@ -28,7 +24,17 @@ const GRAY_TEXT   = "4A5A70";
 const GRAY_MUTED  = "7A8599";
 const GRAY_LINE   = "D1D8E2";
 
-// ---------- Icon → PNG helpers ----------
+// ---------- Logo (loaded once) ----------
+let logoDataUri = null;
+try {
+  const logoPath = path.resolve("assets/logo.png");
+  const buf = fs.readFileSync(logoPath);
+  logoDataUri = "image/png;base64," + buf.toString("base64");
+} catch (e) {
+  console.warn("[render-deck] Could not load assets/logo.png — cover will skip the logo. Error:", e.message);
+}
+
+// ---------- Icon helpers ----------
 function renderIconSvg(IconComponent, color, size = 256) {
   return ReactDOMServer.renderToStaticMarkup(
     React.createElement(IconComponent, { color, size: String(size) })
@@ -40,7 +46,7 @@ async function iconPng(IconComponent, color = "#FFFFFF", size = 256) {
   return "image/png;base64," + buf.toString("base64");
 }
 
-// ---------- Utility formatters ----------
+// ---------- Formatters ----------
 function formatPhone(raw) {
   if (!raw) return "";
   const digits = String(raw).replace(/\D/g, "");
@@ -54,7 +60,6 @@ function formatPhone(raw) {
 }
 
 function fmtEventDate(isoOrDateStr) {
-  // Accepts both "2026-04-28" and "2026-04-28T13:00:00Z"
   if (!isoOrDateStr) return { day: "", date: "" };
   const isoDay = isoOrDateStr.slice(0, 10);
   const [y, m, d] = isoDay.split("-").map(Number);
@@ -64,7 +69,6 @@ function fmtEventDate(isoOrDateStr) {
   return { day, date };
 }
 
-// Tag colors for events
 function eventTagColor(category) {
   const map = {
     MEETING:   NAVY,
@@ -121,18 +125,6 @@ function addFooter(slide, pres, slideLabel) {
 }
 
 // ---------- Slide builders ----------
-// Each one takes a slide, the pres, prebuilt icons, and the relevant data slice.
-
-// Load the logo file once at module init. Path is relative to the repo root,
-// which is the working directory when the workflow runs.
-let logoDataUri = null;
-try {
-  const logoPath = path.resolve("assets/logo.png");
-  const buf = fs.readFileSync(logoPath);
-  logoDataUri = "image/png;base64," + buf.toString("base64");
-} catch (e) {
-  console.warn("[render-deck] Could not load assets/logo.png — cover will skip the logo. Error:", e.message);
-}
 
 function buildCoverSlide(s, _pres, _icons, { weekHumanLabel, onCall }) {
   s.background = { color: NAVY_DARK };
@@ -143,18 +135,16 @@ function buildCoverSlide(s, _pres, _icons, { weekHumanLabel, onCall }) {
     fill: { color: YELLOW }, line: { color: YELLOW }
   });
 
-  // Bottom yellow stripe — now holds dispatch + material runs info
+  // Bottom yellow stripe — holds dispatch + material runs
   s.addShape("rect", {
     x: -1, y: 6.4, w: 15, h: 1.1,
     fill: { color: YELLOW }, line: { color: YELLOW }
   });
 
-  // Logo (left side, replaces GR monogram)
+  // Logo (left side)
   if (logoDataUri) {
-    // Logo is 800×472 — aspect ~1.69:1. Put it in a 3.6"×2.13" slot on the left.
     s.addImage({ data: logoDataUri, x: 0.6, y: 1.8, w: 3.6, h: 2.13 });
   } else {
-    // Fallback if logo file is missing
     s.addText("GOLDEN RULE", {
       x: 0.6, y: 2.4, w: 3.6, h: 0.6,
       fontFace: "Arial Black", fontSize: 24, color: YELLOW, bold: true,
@@ -181,21 +171,19 @@ function buildCoverSlide(s, _pres, _icons, { weekHumanLabel, onCall }) {
     valign: "middle", margin: 0, charSpacing: 4
   });
 
-  // Week of label
   s.addText(`WEEK OF  ${weekHumanLabel.toUpperCase()}`, {
     x: 4.5, y: 3.7, w: 8.3, h: 0.5,
     fontFace: "Arial", fontSize: 22, color: STEEL_LIGHT, bold: true,
     valign: "middle", margin: 0, charSpacing: 3
   });
 
-  // Location tag
   s.addText("WEST CHESTER, PA", {
     x: 4.5, y: 4.4, w: 8.3, h: 0.4,
     fontFace: "Arial", fontSize: 13, color: GRAY_MUTED, bold: true,
     valign: "middle", margin: 0, charSpacing: 3
   });
 
-  // Bottom yellow bar — Dispatch + Material Runs
+  // Bottom yellow bar text
   const dispatcher = onCall?.dispatcher || "[ NOT SET ]";
   const materialRuns = onCall?.materialRuns || "[ NOT SET ]";
   s.addText(
@@ -207,59 +195,11 @@ function buildCoverSlide(s, _pres, _icons, { weekHumanLabel, onCall }) {
     }
   );
 }
-  // Top thin yellow stripe
-  s.addShape("rect", {
-    x: 0, y: 0, w: 13.333, h: 0.12,
-    fill: { color: YELLOW }, line: { color: YELLOW }
-  });
-  // GR monogram
-  s.addShape("rect", {
-    x: 0.8, y: 1.4, w: 3.0, h: 3.0,
-    fill: { color: YELLOW }, line: { color: YELLOW }
-  });
-  s.addText("GR", {
-    x: 0.8, y: 1.4, w: 3.0, h: 3.0,
-    fontFace: "Arial Black", fontSize: 130, color: NAVY_DARK, bold: true,
-    align: "center", valign: "middle", margin: 0
-  });
-  // Headline + week
-  s.addText("SHOP", {
-    x: 4.3, y: 1.3, w: 8.5, h: 1.2,
-    fontFace: "Arial Black", fontSize: 90, color: WHITE, bold: true,
-    valign: "middle", margin: 0, charSpacing: 4
-  });
-  s.addText("BRIEFING", {
-    x: 4.3, y: 2.4, w: 8.5, h: 1.2,
-    fontFace: "Arial Black", fontSize: 90, color: YELLOW, bold: true,
-    valign: "middle", margin: 0, charSpacing: 4
-  });
-  s.addText(`WEEK OF  ${weekHumanLabel.toUpperCase()}`, {
-    x: 4.3, y: 3.7, w: 8.5, h: 0.5,
-    fontFace: "Arial", fontSize: 22, color: STEEL_LIGHT, bold: true,
-    valign: "middle", margin: 0, charSpacing: 3
-  });
-  s.addText("DOING UNTO OTHERS — ONE PIPE AT A TIME", {
-    x: 0, y: 6.4, w: 13.333, h: 1.1,
-    fontFace: "Arial Black", fontSize: 24, color: NAVY_DARK, bold: true,
-    align: "center", valign: "middle", margin: 0, charSpacing: 3
-  });
-  s.addText("GOLDEN RULE PLUMBING & CONTRACTING", {
-    x: 0.8, y: 0.9, w: 12, h: 0.4,
-    fontFace: "Arial", fontSize: 14, color: STEEL_LIGHT, bold: true,
-    valign: "middle", margin: 0, charSpacing: 4
-  });
-  s.addText("WEST CHESTER, PA", {
-    x: 4.3, y: 4.9, w: 8.5, h: 0.4,
-    fontFace: "Arial", fontSize: 13, color: GRAY_MUTED, bold: true,
-    valign: "middle", margin: 0, charSpacing: 3
-  });
-}
 
 async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "ON CALL THIS WEEK", icons.phoneYellow);
 
-  // Left card — primary tech
   s.addShape("rect", { x: 0.5, y: 1.2, w: 6.0, h: 5.6, fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
   s.addShape("rect", { x: 0.5, y: 1.2, w: 0.14, h: 5.6, fill: { color: YELLOW }, line: { color: YELLOW } });
 
@@ -276,7 +216,6 @@ async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
     valign: "middle", margin: 0
   });
 
-  // Phone
   s.addImage({ data: icons.phoneYellowSm, x: 0.85, y: 3.4, w: 0.32, h: 0.32 });
   s.addText(formatPhone(onCall?.primaryMobile) || "(no number on file)", {
     x: 1.3, y: 3.35, w: 5.0, h: 0.4,
@@ -284,7 +223,6 @@ async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
     valign: "middle", margin: 0
   });
 
-  // Email
   s.addImage({ data: icons.envelopeYellow, x: 0.85, y: 3.95, w: 0.32, h: 0.32 });
   s.addText(onCall?.primaryEmail || "(no email on file)", {
     x: 1.3, y: 3.9, w: 5.0, h: 0.4,
@@ -292,10 +230,8 @@ async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
     valign: "middle", margin: 0
   });
 
-  // Divider
   s.addShape("line", { x: 0.85, y: 4.7, w: 5.3, h: 0, line: { color: STEEL, width: 1 } });
 
-  // Dispatch
   s.addText("DISPATCH / OFFICE", {
     x: 0.85, y: 4.9, w: 5.5, h: 0.35,
     fontFace: "Arial", fontSize: 12, color: YELLOW, bold: true,
@@ -307,7 +243,6 @@ async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
     valign: "middle", margin: 0
   });
 
-  // Right yellow card — emergency line
   s.addShape("rect", { x: 6.85, y: 1.2, w: 6.0, h: 5.6, fill: { color: YELLOW }, line: { color: YELLOW } });
   s.addImage({ data: icons.phoneNavy, x: 9.45, y: 1.5, w: 0.8, h: 0.8 });
   s.addText("EMERGENCY LINE", {
@@ -315,7 +250,7 @@ async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
     fontFace: "Arial Black", fontSize: 22, color: NAVY_DARK, bold: true,
     align: "center", valign: "middle", margin: 0, charSpacing: 4
   });
-  s.addText("(610) 269-0299", { // hardcoded — your real shop line; edit if it changes
+  s.addText("(610) 269-0299", {
     x: 6.85, y: 3.0, w: 6.0, h: 1.2,
     fontFace: "Arial Black", fontSize: 48, color: NAVY_DARK, bold: true,
     align: "center", valign: "middle", margin: 0
@@ -344,7 +279,6 @@ function buildEventsSlide(s, pres, icons, { events }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "UPCOMING EVENTS & DEADLINES", icons.calendar);
 
-  // Pad to 4 cards; if fewer events, show empty placeholder cards
   const cards = events.slice(0, 4).map(e => {
     const { day, date } = fmtEventDate(e.startISO);
     return {
@@ -520,7 +454,6 @@ function buildMovedItemsSlide(s, pres, icons, { movedItems }, slideLabel) {
       valign: "middle", margin: 0
     });
 
-    // OLD
     s.addShape("rect", { x: 4.5, y: y + 0.25, w: 3.3, h: rowH - 0.5,
       fill: { color: STEEL_LIGHT }, line: { color: GRAY_LINE, width: 1 } });
     s.addText("OLD LOCATION", {
@@ -536,7 +469,6 @@ function buildMovedItemsSlide(s, pres, icons, { movedItems }, slideLabel) {
 
     s.addImage({ data: icons.arrowYellow, x: 7.95, y: y + 0.55, w: 0.5, h: 0.5 });
 
-    // NEW
     s.addShape("rect", { x: 8.6, y: y + 0.25, w: 4.1, h: rowH - 0.5,
       fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
     s.addText("NEW LOCATION", {
@@ -625,7 +557,6 @@ function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
     });
   }
 
-  // Right: stats
   const statCard = (x, y, label, value, accent = YELLOW) => {
     s.addShape("rect", { x, y, w: rightW, h: 1.8,
       fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
@@ -644,9 +575,9 @@ function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
   };
 
   const counts = jobBoard?.counts || { open: 0, inProgress: 0, total: 0 };
-  statCard(rightX, 1.15, "OPEN JOBS",       String(counts.open),       YELLOW);
-  statCard(rightX, 3.10, "IN PROGRESS",     String(counts.inProgress), NAVY_DARK);
-  statCard(rightX, 5.05, "TOTAL THIS WK",   String(counts.total),      RED_ALERT);
+  statCard(rightX, 1.15, "OPEN JOBS",      String(counts.open),       YELLOW);
+  statCard(rightX, 3.10, "IN PROGRESS",    String(counts.inProgress), NAVY_DARK);
+  statCard(rightX, 5.05, "TOTAL THIS WK",  String(counts.total),      RED_ALERT);
 
   s.addText("PULLED LIVE FROM HCP", {
     x: rightX, y: 6.9, w: rightW, h: 0.25,
@@ -661,7 +592,6 @@ function buildSafetySlide(s, pres, icons, { safetyTopic }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "SAFETY & SHOP REMINDERS", icons.alert);
 
-  // Left big card
   s.addShape("rect", { x: 0.5, y: 1.15, w: 6.0, h: 5.85, fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
   s.addShape("rect", { x: 0.5, y: 1.15, w: 0.14, h: 5.85, fill: { color: YELLOW }, line: { color: YELLOW } });
   s.addImage({ data: icons.shield, x: 0.9, y: 1.45, w: 0.65, h: 0.65 });
@@ -697,7 +627,6 @@ function buildSafetySlide(s, pres, icons, { safetyTopic }, slideLabel) {
     align: "center", valign: "middle", margin: 0, charSpacing: 2
   });
 
-  // Right: standing reminders
   const tiles = [
     { icon: icons.truck,    label: "VAN CHECK",         text: "Walk-around + fluids — every Monday AM" },
     { icon: icons.hardHat,  label: "PPE",               text: "Boots, eyes, gloves, hard hat on every job" },
@@ -732,7 +661,6 @@ function buildShoutoutSlide(s, pres, icons, { shoutout }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "SHOUTOUTS", icons.trophy);
 
-  // Center the single tech-of-the-week card, wide
   s.addShape("rect", { x: 0.5, y: 1.15, w: 12.333, h: 5.85,
     fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
   s.addShape("rect", { x: 0.5, y: 1.15, w: 12.333, h: 0.14,
@@ -744,7 +672,6 @@ function buildShoutoutSlide(s, pres, icons, { shoutout }, slideLabel) {
     align: "center", valign: "middle", margin: 0, charSpacing: 4
   });
 
-  // 5 stars centered
   const starsW = 5 * 0.55 + 4 * 0.12;
   const starsX = (13.333 - starsW) / 2;
   for (let i = 0; i < 5; i++) {
@@ -780,10 +707,10 @@ function buildKPIsSlide(s, pres, icons, { kpis }, slideLabel) {
   addHeaderBar(s, pres, "WEEKLY GOALS & NUMBERS", icons.fire);
 
   const stats = [
-    { label: "JOBS CLOSED",   value: String(kpis?.jobsClosed ?? 0), sub: "LAST WEEK", color: YELLOW },
-    { label: "REVENUE",       value: kpis?.revenueDisplay ?? "$0",  sub: "LAST WEEK", color: GREEN_OK },
-    { label: "WEEK'S TOTAL",  value: "—",                           sub: "(reserved)", color: NAVY_DARK },
-    { label: "AVG RESPONSE",  value: "—",                           sub: "(reserved)", color: RED_ALERT },
+    { label: "JOBS CLOSED",   value: String(kpis?.jobsClosed ?? 0), sub: "LAST WEEK",   color: YELLOW },
+    { label: "REVENUE",       value: kpis?.revenueDisplay ?? "$0",  sub: "LAST WEEK",   color: GREEN_OK },
+    { label: "WEEK'S TOTAL",  value: "—",                           sub: "(reserved)",  color: NAVY_DARK },
+    { label: "AVG RESPONSE",  value: "—",                           sub: "(reserved)",  color: RED_ALERT },
   ];
   const tW = 2.95, tH = 2.3, tGap = 0.15;
   const totalW = 4 * tW + 3 * tGap;
@@ -814,7 +741,6 @@ function buildKPIsSlide(s, pres, icons, { kpis }, slideLabel) {
     });
   }
 
-  // Bottom motivational block
   s.addShape("rect", { x: 0.5, y: 3.85, w: 12.333, h: 3.15,
     fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
   s.addShape("rect", { x: 0.5, y: 3.85, w: 0.14, h: 3.15,
@@ -842,7 +768,6 @@ function buildKPIsSlide(s, pres, icons, { kpis }, slideLabel) {
 // ---------- Main render entry point ----------
 
 export async function renderDeck(data, outputPath) {
-  // Pre-render every icon once
   const icons = {
     phoneYellow:    await iconPng(FaPhone, "#FFD000", 320),
     phoneYellowSm:  await iconPng(FaPhone, "#FFD000", 320),
@@ -866,7 +791,6 @@ export async function renderDeck(data, outputPath) {
     shield:         await iconPng(FaShieldAlt, "#FFFFFF", 320),
   };
 
-  // Decide which slides to render based on data presence
   const plan = [];
   plan.push({ key: "cover",      label: "COVER" });
   plan.push({ key: "oncall",     label: "ON CALL" });
@@ -878,7 +802,6 @@ export async function renderDeck(data, outputPath) {
   if (data.shoutout)    plan.push({ key: "shoutout", label: "SHOUTOUT" });
   plan.push({ key: "kpis",       label: "GOALS" });
 
-  // Number them, excluding the cover from the count
   const totalNumbered = plan.length - 1;
   let numberedIndex = 0;
   const labelFor = (i) => {
@@ -898,11 +821,11 @@ export async function renderDeck(data, outputPath) {
     const labelStr = labelFor(i);
     switch (item.key) {
       case "cover":
-  buildCoverSlide(s, pres, icons, {
-    weekHumanLabel: data.weekOf.humanLabel,
-    onCall: data.onCall,
-  });
-  break;
+        buildCoverSlide(s, pres, icons, {
+          weekHumanLabel: data.weekOf.humanLabel,
+          onCall: data.onCall,
+        });
+        break;
       case "oncall":
         await buildOnCallSlide(s, pres, icons, { onCall: data.onCall }, labelStr);
         break;
