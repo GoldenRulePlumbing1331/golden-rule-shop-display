@@ -2,6 +2,7 @@
 // Pulls scheduled jobs for a week and shapes them for the shop display.
 
 import { getScheduledJobs } from "./hcp.js";
+import { overrideFirstName } from "./name-overrides.js";
 
 // Eastern Time helpers — Golden Rule is in PA, so the deck should reflect ET.
 // We don't need a full tz library; Intl.DateTimeFormat handles it.
@@ -11,8 +12,20 @@ const ET = "America/New_York";
 function formatTechDisplay(names, maxChars = 28) {
   if (!names || names.length === 0) return "[ UNASSIGNED ]";
 
-  // Use first names only; first names + last initials get long fast on a crew of 3-4.
-  const firsts = names.map(n => (n.split(/\s+/)[0] || n).trim());
+// Use first names only; first names + last initials get long fast on a crew of 3-4.
+  // The HCP first_name field is split on whitespace, then the override table is applied
+  // so e.g. "R Kevin" → "Kevin" instead of truncating to just "R".
+  const firsts = names.map(fullName => {
+    // The fullName here is "First Last" (built from HCP's first_name + last_name).
+    // We need the original first_name part, which is everything before the FINAL space.
+    // But our shapeJob already concatenated, so the safest thing is: take everything
+    // up to the last space as the "first name field", then run that through the override.
+    const lastSpace = fullName.lastIndexOf(" ");
+    const firstNameField = lastSpace > 0 ? fullName.slice(0, lastSpace) : fullName;
+    const overridden = overrideFirstName(firstNameField);
+    // Now apply our existing first-token rule to the (possibly overridden) value.
+    return (overridden.split(/\s+/)[0] || overridden).trim();
+  });
 
   // Single tech — show the full first name.
   if (firsts.length === 1) return firsts[0];
