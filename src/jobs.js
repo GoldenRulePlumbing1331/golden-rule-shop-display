@@ -117,6 +117,7 @@ function shapeJob(job) {
     customerName: [cust.first_name, cust.last_name].filter(Boolean).join(" ") || cust.company || "(no customer)",
     city: addr.city || null,
     totalAmount: job.total_amount || 0,
+    outstandingBalance: job.outstanding_balance || 0,
   };
 }
 
@@ -227,6 +228,120 @@ function formatRevenue(amountCents) {
 }
 
 // ---------------------------------------------------------------------------
+// Callback count — jobs tagged "Callback" within a window
+// ---------------------------------------------------------------------------
+
+export async function countCallbacksInRange({ startISO, endISO }) {
+  const all = [];
+  let page = 1;
+  while (true) {
+    const resp = await getJobsInRange({ startISO, endISO, pageSize: 100, page });
+    const batch = resp?.jobs || [];
+    all.push(...batch);
+    const totalPages = resp?.total_pages || 1;
+    if (page >= totalPages) break;
+    page += 1;
+    if (page > 20) break;
+  }
+
+  function hasCallbackTag(job) {
+    const tags = job.tags || [];
+    return tags.some(t => {
+      const name = typeof t === "string" ? t : (t.name || "");
+      return name.toLowerCase() === "callback";
+    });
+  }
+
+  return all.filter(hasCallbackTag).length;
+}
+
+// ---------------------------------------------------------------------------
+// Uncollected balances — jobs in window with outstanding_balance > 0
+// ---------------------------------------------------------------------------
+
+export async function getUncollectedSummary({ startISO, endISO }) {
+  const all = [];
+  let page = 1;
+  while (true) {
+    const resp = await getJobsInRange({ startISO, endISO, pageSize: 100, page });
+    const batch = resp?.jobs || [];
+    all.push(...batch);
+    const totalPages = resp?.total_pages || 1;
+    if (page >= totalPages) break;
+    page += 1;
+    if (page > 20) break;
+  }
+
+  const withBalance = all.filter(j => (j.outstanding_balance || 0) > 0);
+  const totalCents = withBalance.reduce((sum, j) => sum + (j.outstanding_balance || 0), 0);
+
+  return {
+    count: withBalance.length,
+    totalCents,
+    totalDollars: Math.round(totalCents / 100),
+    display: formatRevenue(totalCents),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Per-tech job counts — for the bar chart on Goals slide
+// ---------------------------------------------------------------------------
+
+// The fixed lineup of techs we display across the shop deck.
+// First name → matched against assigned_employees on jobs.
+// Order here is the order they'll appear in the bar chart unless re-sorted.
+export const TIME_TRACKING_TECHS = [
+  { id: "pro_d60fd2a5a1ba4630a5eaa3ef4eec5fb7", first: "Donat",  last: "Houle",     display: "Donat" },
+  { id: "pro_2ad90ce39da54e669fdf80d7d0642c74", first: "Matt",   last: "Shew",      display: "Matt" },
+  { id: "pro_dce147af238f473fa002e40d9eb78b59", first: "Rudy",   last: "Dimemmo",   display: "Rudy" },
+  { id: "pro_f2b087323f4844feac6f872692f94575", first: "Mark",   last: "Wileczek",  display: "Mark" },
+  { id: "pro_c16796482f324fd6b9a0aa6cf2c2e200", first: "Tanner", last: "Lasco",     display: "Tanner" },
+  { id: "pro_2493967341af4b11a1f93223670a2eb6", first: "Sam",    last: "Parry",     display: "Sam" },
+  { id: "pro_31c8e5be25454345a92c54e461a81034", first: "Dom",    last: "Facciolo",  display: "Dom" },
+  { id: "pro_334b5e2b6f6749ebbfd07753f850b23c", first: "Pat",    last: "Donnelly",  display: "Pat" },
+  { id: "pro_4fa8fe66def94c0ba0455943825f9f78", first: "Kevin",  last: "Donnelly",  display: "Kevin" },
+  { id: "pro_672e3970d1924afa8f18a4d6020613fc", first: "Ed",     last: "Carr",      display: "Ed" },
+  { id: "pro_80742babc13b413c887ce9b104a645d9", first: "Jay",    last: "Stetser",   display: "Jay" },
+];
+
+export async function getCompletedByTech({ startISO, endISO }) {
+  const all = [];
+  let page = 1;
+  while (true) {
+    const resp = await getJobsInRange({ startISO, endISO, pageSize: 100, page });
+    const batch = resp?.jobs || [];
+    all.push(...batch);
+    const totalPages = resp?.total_pages || 1;
+    if (page >= totalPages) break;
+    page += 1;
+    if (page > 20) break;
+  }
+  const completed = all.filter(j => COMPLETE_STATUSES.has(j.work_status));
+
+  // Count by lead tech
+  const counts = new Map();
+  for (const t of TIME_TRACKING_TECHS) counts.set(t.id, 0);
+
+  for (const j of completed) {
+    const employees = j.assigned_employees || [];
+    if (employees.length === 0) continue;
+    const lead = employees[0];
+    if (counts.has(lead.id)) {
+      counts.set(lead.id, counts.get(lead.id) + 1);
+    }
+  }
+
+  // Build bars in TIME_TRACKING_TECHS order, then filter to non-zero
+  // and sort descending by count (matches HCP's chart style)
+  const rows = TIME_TRACKING_TECHS
+    .map(t => ({ techId: t.id, name: t.display, count: counts.get(t.id) || 0 }))
+    .filter(r => r.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+  return rows;
+}
+
+// ---------------------------------------------------------------------------
 // Employees
 // ---------------------------------------------------------------------------
 
@@ -245,26 +360,18 @@ export async function getEmployeeRoster() {
 }
 
 // ---------------------------------------------------------------------------
-// Tag-based duration averages — for the "Average Job Time" slide
+// Tag-based duration averages
 // ---------------------------------------------------------------------------
 
 const NON_WORK_TAGS = new Set([
-  // Customer relationship
   "New Customer", "Tenant", "Landlord", "Family/Friend", "Contractor",
-  // Supply origin
   "GR Supplied", "Homeowner Supplied",
-  // Admin / lifecycle
   "Material Ordered", "Warranty", "Follow-up", "Final", "Walkout",
-  "Bill From Shop", "Reconnect",
-  // Place / community
+  "Bill From Shop", "Reconnect", "Callback",
   "BCWC Members", "Hersheys Mill", "Exton Station",
-  // Tech routing
   "No Send: Kevin", "Requested: Donat", "Requested: Brett", "Requested: Dom",
-  // Service mode (not a work type)
   "Emergency",
-  // Brands (descriptors, not jobs)
   "Moen", "Rheem",
-  // Misc admin
   "Pipeline Automation",
 ]);
 
@@ -357,12 +464,9 @@ export async function getTagDurations({ daysBack = 30, topN = 8 } = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Timestamp hygiene — per-tech compliance with OMW / Start / Finish
+// Time tracking — per-tech compliance with OMW / Start / Finish
 // ---------------------------------------------------------------------------
 
-// Compute compliance for one job. All three buttons (OMW, Start, Finish) are
-// tracked on every job — the shop expects every tech to hit all three on
-// every visit, regardless of job type.
 function jobCompliance(job) {
   const wt = job.work_timestamps || {};
   return {
@@ -387,12 +491,10 @@ function rollupTech(empId, empName, jobs) {
     if (c.startHit) stats.startHit += 1;
     if (c.finishHit) stats.finishHit += 1;
   }
-  // All three percentages use the same denominator (total jobs)
   stats.omwPct    = jobs.length > 0 ? Math.round(100 * stats.omwHit    / jobs.length) : null;
   stats.startPct  = jobs.length > 0 ? Math.round(100 * stats.startHit  / jobs.length) : null;
   stats.finishPct = jobs.length > 0 ? Math.round(100 * stats.finishHit / jobs.length) : null;
 
-  // Overall: simple average of the three percentages
   const pcts = [stats.omwPct, stats.startPct, stats.finishPct].filter(p => p !== null);
   stats.overallPct = pcts.length > 0
     ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length)
@@ -423,27 +525,49 @@ async function computeHygieneForWindow({ daysBack }) {
     if (page > 20) break;
   }
 
-  // Only completed jobs — work in progress shouldn't count against finish %
   const eligible = all.filter(j => COMPLETE_STATUSES.has(j.work_status));
 
-  // Group by lead tech (first assigned employee)
+  // Group by lead tech
   const byTech = new Map();
   for (const j of eligible) {
     const employees = j.assigned_employees || [];
     if (employees.length === 0) continue;
     const lead = employees[0];
-    const id = lead.id;
-    const name = `${lead.first_name || ""} ${lead.last_name || ""}`.trim();
-    if (!byTech.has(id)) byTech.set(id, { name, jobs: [] });
-    byTech.get(id).jobs.push(j);
+    if (!byTech.has(lead.id)) byTech.set(lead.id, { jobs: [] });
+    byTech.get(lead.id).jobs.push(j);
   }
 
+  // Build a row for EVERY tech in the allowlist — even if they have zero jobs.
+  // Techs not in the allowlist are excluded entirely.
   const rows = [];
-  for (const [empId, { name, jobs }] of byTech.entries()) {
-    if (jobs.length < 3) continue;
-    rows.push(rollupTech(empId, name, jobs));
+  for (const t of TIME_TRACKING_TECHS) {
+    const fullName = `${t.first} ${t.last}`.trim();
+    const bucket = byTech.get(t.id);
+    if (!bucket || bucket.jobs.length === 0) {
+      // No lead jobs in this window — show as N/A across the board
+      rows.push({
+        employeeId: t.id,
+        name: fullName,
+        displayName: t.display,
+        totalJobs: 0,
+        omwHit: 0, startHit: 0, finishHit: 0,
+        omwPct: null, startPct: null, finishPct: null, overallPct: null,
+      });
+    } else {
+      const stats = rollupTech(t.id, fullName, bucket.jobs);
+      stats.displayName = t.display;
+      rows.push(stats);
+    }
   }
-  rows.sort((a, b) => (b.overallPct ?? 0) - (a.overallPct ?? 0));
+
+  // Sort: techs with data first (by overall desc), techs with no data last
+  rows.sort((a, b) => {
+    const aHas = a.overallPct !== null ? 1 : 0;
+    const bHas = b.overallPct !== null ? 1 : 0;
+    if (aHas !== bHas) return bHas - aHas;
+    return (b.overallPct ?? 0) - (a.overallPct ?? 0);
+  });
+
   return rows;
 }
 
@@ -453,23 +577,9 @@ export async function getHygieneStats() {
     computeHygieneForWindow({ daysBack: 30 }),
   ]);
 
-  // Apply the name override (e.g. R Kevin → Kevin) for display
-  function shorten(name) {
-    const lastSpace = name.lastIndexOf(" ");
-    const firstField = lastSpace > 0 ? name.slice(0, lastSpace) : name;
-    const last = lastSpace > 0 ? name.slice(lastSpace + 1) : "";
-    const overridden = overrideFirstName(firstField);
-    const firstWord = overridden.split(/\s+/)[0] || overridden;
-    return last ? `${firstWord} ${last}` : firstWord;
-  }
-  for (const r of last7) r.displayName = shorten(r.name);
-  for (const r of last30) r.displayName = shorten(r.name);
-
-  // Identify this week's leader (highest overall, must have ≥5 jobs in last 7 days)
   const eligibleLeaders = last7.filter(r => r.totalJobs >= 5);
   const leader = eligibleLeaders.length > 0 ? eligibleLeaders[0] : null;
 
-  // Identify any tech below 80% in the 30-day window
   const flagged = last30.filter(r => r.overallPct !== null && r.overallPct < 80);
 
   return { last7, last30, leader, flagged };
