@@ -11,7 +11,7 @@ import {
   FaExclamationTriangle, FaTrophy, FaClipboardList,
   FaWrench, FaTruck, FaHardHat, FaBell, FaStar, FaArrowRight,
   FaMapMarkerAlt, FaShieldAlt, FaFire, FaEnvelope,
-} from "react-icons/fa/index.js";
+} from "react-icons/fa";
 
 // ---------- Brand palette (mirrors the template) ----------
 const NAVY_DARK   = "0F1E3A";
