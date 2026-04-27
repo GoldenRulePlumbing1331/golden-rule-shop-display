@@ -123,9 +123,6 @@ function addFooter(slide, pres, slideLabel) {
 // ---------- Slide builders ----------
 // Each one takes a slide, the pres, prebuilt icons, and the relevant data slice.
 
-import fs from "fs";
-import path from "path";
-
 // Load the logo file once at module init. Path is relative to the repo root,
 // which is the working directory when the workflow runs.
 let logoDataUri = null;
