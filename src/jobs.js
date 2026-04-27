@@ -236,22 +236,20 @@ export async function getCompletedJobsInRange({ startISO, endISO }) {
 // Roll up KPIs from a list of completed jobs.
 export function rollupKPIs(completedJobs) {
   const jobsClosed = completedJobs.length;
-  const revenue = completedJobs.reduce((sum, j) => sum + (j.totalAmount || 0), 0);
+  const revenueCents = completedJobs.reduce((sum, j) => sum + (j.totalAmount || 0), 0);
   return {
     jobsClosed,
-    revenueDollars: Math.round(revenue),       // for "$48,250" display
-    revenueDisplay: formatRevenue(revenue),     // formatted string
+    revenueDollars: Math.round(revenueCents / 100),  // for downstream math
+    revenueCents,                                    // raw, for debugging
+    revenueDisplay: formatRevenue(revenueCents),     // formatted string for the slide
   };
 }
 
-function formatRevenue(amount) {
-  // HCP returns total_amount as a number in dollars (verified from the test dump:
-  // total_amount: 0 was a plain integer). If it ever comes back in cents, divide here.
-  if (!amount || amount < 0) return "$0";
-  if (amount >= 1000) {
-    return "$" + amount.toLocaleString("en-US", { maximumFractionDigits: 0 });
-  }
-  return "$" + amount.toFixed(0);
+function formatRevenue(amountCents) {
+  // HCP returns total_amount in CENTS (integer). Always divide by 100.
+  if (!amountCents || amountCents < 0) return "$0";
+  const dollars = amountCents / 100;
+  return "$" + dollars.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
 
 // ---------------------------------------------------------------------------
