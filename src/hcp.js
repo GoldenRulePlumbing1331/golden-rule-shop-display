@@ -48,6 +48,26 @@ export async function getScheduledJobs({ startISO, endISO, pageSize = 100, page 
   });
 }
 
+// Returns jobs whose work_status indicates completion, scheduled within a date range.
+// We filter by scheduled_start (not completion date) because HCP's API is cleaner that way —
+// any job scheduled in the window that ended up complete will be picked up.
+export async function getJobsInRange({ startISO, endISO, pageSize = 100, page = 1 }) {
+  return hcpFetch("/jobs", {
+    scheduled_start_min: startISO,
+    scheduled_start_max: endISO,
+    page_size: pageSize,
+    page,
+  });
+}
+
+// Lists all employees on the account.
+// Returns one page; HCP accounts rarely have 100+ employees so pagination is unlikely.
+export async function getEmployees({ pageSize = 100, page = 1 } = {}) {
+  return hcpFetch("/employees", {
+    page_size: pageSize,
+    page,
+  });
+}
 // Simple connection test — just pulls a couple of jobs.
 export async function ping() {
   return hcpFetch("/jobs", { page_size: 1 });
