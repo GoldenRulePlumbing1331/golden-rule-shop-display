@@ -269,3 +269,138 @@ export async function getEmployeeRoster() {
     role: e.role || null,
   }));
 }
+
+// ---------------------------------------------------------------------------
+// Tag durations → for the "Average Job Time by Category" slide
+// ---------------------------------------------------------------------------
+
+// Tags that describe relationships, supply, or admin states — NOT the type of
+// work performed. These are excluded from the duration averages because their
+// "average duration" doesn't carry useful signal.
+const NON_WORK_TAGS = new Set([
+  // Customer relationship
+  "New Customer", "Tenant", "Landlord", "Family/Friend", "Contractor",
+  // Supply origin
+  "GR Supplied", "Homeowner Supplied",
+  // Admin / lifecycle
+  "Material Ordered", "Warranty", "Follow-up", "Final", "Walkout",
+  "Bill From Shop", "Reconnect",
+  // Property/territory tags
+  "BCWC Members", "Hersheys Mill", "Exton Station",
+  // Tech routing
+  "No Send: Kevin", "Requested: Donat", "Requested: Brett", "Requested: Dom",
+  // Service modes (not work types)
+  "Emergency",
+  // Other admin
+  "Pipeline Automation",
+]);
+
+function tagName(t) {
+  // HCP returns tags either as strings or as { name, ... } objects.
+  if (typeof t === "string") return t;
+  return t?.name || t?.label || null;
+}
+
+function median(numbers) {
+  if (!numbers || numbers.length === 0) return null;
+  const sorted = [...numbers].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+  }
+  return sorted[mid];
+}
+
+// Try actual times first (work_timestamps), fall back to scheduled.
+function jobDurationMinutes(rawJob) {
+  const startedAt = rawJob?.work_timestamps?.started_at;
+  const completedAt = rawJob?.work_timestamps?.completed_at;
+  if (startedAt && completedAt) {
+    const ms = new Date(completedAt) - new Date(startedAt);
+    if (ms > 0) return Math.round(ms / 60000);
+  }
+  const schedStart = rawJob?.schedule?.scheduled_start;
+  const schedEnd = rawJob?.schedule?.scheduled_end;
+  if (schedStart && schedEnd) {
+    const ms = new Date(schedEnd) - new Date(schedStart);
+    if (ms > 0) return Math.round(ms / 60000);
+  }
+  return null;
+}
+
+function fmtDurationMinutes(mins) {
+  if (mins == null) return "—";
+  if (mins >= 60) {
+    const hrs = mins / 60;
+    return Number.isInteger(hrs) ? `${hrs} hr` : `${hrs.toFixed(1)} hr`;
+  }
+  return `${mins} min`;
+}
+
+// Pulls completed jobs in the last `days` days, computes median duration
+// by tag, returns the top N work-type tags sorted by job count.
+export async function getTagDurations({ days = 30, topN = 8 } = {}) {
+  const end = new Date();
+  const start = new Date(end);
+  start.setUTCDate(end.getUTCDate() - days);
+  start.setUTCHours(0, 0, 0, 0);
+
+  // Pull all completed jobs in the window
+  const all = [];
+  let page = 1;
+  while (true) {
+    const resp = await getJobsInRange({
+      startISO: start.toISOString(),
+      endISO: end.toISOString(),
+      pageSize: 100,
+      page,
+    });
+    const batch = resp?.jobs || [];
+    all.push(...batch);
+    const totalPages = resp?.total_pages || 1;
+    if (page >= totalPages) break;
+    page += 1;
+    if (page > 30) break;
+  }
+
+  const COMPLETE = new Set(["complete", "complete unrated", "complete rated"]);
+  const completed = all.filter(j => COMPLETE.has(j.work_status));
+
+  // Group durations by tag
+  const byTag = new Map(); // tagName -> array of durations in minutes
+  for (const j of completed) {
+    const dur = jobDurationMinutes(j);
+    if (dur == null || dur <= 0) continue;
+    // Cap implausibly long jobs — anything over 16 hours is almost certainly
+    // a "tech forgot to hit complete" data error rather than a real job duration.
+    if (dur > 16 * 60) continue;
+
+    const tags = (j.tags || []).map(tagName).filter(Boolean);
+    for (const t of tags) {
+      if (NON_WORK_TAGS.has(t)) continue;
+      if (!byTag.has(t)) byTag.set(t, []);
+      byTag.get(t).push(dur);
+    }
+  }
+
+  // Build summary records
+  const records = [];
+  for (const [tag, durs] of byTag.entries()) {
+    if (durs.length < 3) continue; // need at least 3 jobs to compute a meaningful median
+    const med = median(durs);
+    records.push({
+      tag,
+      count: durs.length,
+      medianMinutes: med,
+      medianLabel: fmtDurationMinutes(med),
+    });
+  }
+
+  // Sort by job count desc, take top N
+  records.sort((a, b) => b.count - a.count);
+  return {
+    windowDays: days,
+    topTags: records.slice(0, topN),
+    totalCompletedJobs: completed.length,
+  };
+}
