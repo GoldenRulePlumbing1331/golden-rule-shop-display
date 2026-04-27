@@ -6,7 +6,8 @@
   "scripts": {
     "test-fetch": "node scripts/test-fetch.js",
     "test-sheets": "node scripts/test-sheets.js",
-    "test-calendar": "node scripts/test-calendar.js"
+    "test-calendar": "node scripts/test-calendar.js",
+    "build-data-preview": "node scripts/build-data-preview.js"
   },
   "dependencies": {
     "googleapis": "^144.0.0",
