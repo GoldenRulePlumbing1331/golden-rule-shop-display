@@ -1,0 +1,24 @@
+# Never commit these
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+service-account*.json
+google-credentials*.json
+hcp-credentials*.json
+credentials.json
+
+# Build outputs
+output/
+node_modules/
+*.pptx
+
+# Editor files
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
