@@ -24,6 +24,9 @@ const GRAY_TEXT   = "4A5A70";
 const GRAY_MUTED  = "7A8599";
 const GRAY_LINE   = "D1D8E2";
 
+// Slide auto-advance timing (seconds). Used by PowerPoint/Keynote.
+const SLIDE_ADVANCE_SECONDS = 15;
+
 // ---------- Logo ----------
 let logoDataUri = null;
 try {
@@ -178,8 +181,9 @@ function buildCoverSlide(s, _pres, _icons, { weekHumanLabel, onCall }) {
     valign: "middle", margin: 0, charSpacing: 3
   });
 
-  const dispatcher = onCall?.dispatcher || "[ NOT SET ]";
-  const materialRuns = onCall?.materialRuns || "[ NOT SET ]";
+  // Bottom yellow bar — read from current week's on-call entry
+  const dispatcher = onCall?.current?.dispatcher || "[ NOT SET ]";
+  const materialRuns = onCall?.current?.materialRuns || "[ NOT SET ]";
   s.addText(
     `DISPATCH:  ${dispatcher.toUpperCase()}     |     MATERIAL RUNS:  ${materialRuns.toUpperCase()}`,
     {
@@ -190,80 +194,127 @@ function buildCoverSlide(s, _pres, _icons, { weekHumanLabel, onCall }) {
   );
 }
 
+// On Call slide — split into THIS WEEK (left) and NEXT WEEK (right)
 async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
-  addHeaderBar(s, pres, "ON CALL THIS WEEK", icons.phoneYellow);
+  addHeaderBar(s, pres, "ON CALL", icons.phoneYellow);
 
-  s.addShape("rect", { x: 0.5, y: 1.2, w: 6.0, h: 5.6, fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
-  s.addShape("rect", { x: 0.5, y: 1.2, w: 0.14, h: 5.6, fill: { color: YELLOW }, line: { color: YELLOW } });
+  // Helper to draw one card
+  const drawCard = (cfg) => {
+    const { x, w, label, dark, entry, accent } = cfg;
+    s.addShape("rect", { x, y: 1.2, w, h: 5.6,
+      fill: { color: dark ? NAVY_DARK : WHITE },
+      line: { color: dark ? NAVY_DARK : GRAY_LINE, width: dark ? 0 : 1 }
+    });
+    // Top accent stripe
+    s.addShape("rect", { x, y: 1.2, w, h: 0.18,
+      fill: { color: accent }, line: { color: accent } });
+    // Left accent bar (skip if not dark)
+    if (dark) {
+      s.addShape("rect", { x, y: 1.2, w: 0.14, h: 5.6,
+        fill: { color: YELLOW }, line: { color: YELLOW } });
+    }
 
-  s.addText("PRIMARY TECH", {
-    x: 0.85, y: 1.45, w: 5.5, h: 0.4,
-    fontFace: "Arial", fontSize: 14, color: YELLOW, bold: true,
-    valign: "middle", margin: 0, charSpacing: 3
+    const textColor    = dark ? WHITE : NAVY_DARK;
+    const labelColor   = dark ? YELLOW : NAVY;
+    const subColor     = dark ? STEEL_LIGHT : GRAY_TEXT;
+    const dividerColor = dark ? STEEL : GRAY_LINE;
+
+    s.addText(label, {
+      x: x + 0.35, y: 1.5, w: w - 0.7, h: 0.4,
+      fontFace: "Arial", fontSize: 14, color: labelColor, bold: true,
+      valign: "middle", margin: 0, charSpacing: 3
+    });
+
+    if (!entry) {
+      // Placeholder for unfilled week
+      s.addText("NOT YET SCHEDULED", {
+        x: x + 0.35, y: 3.4, w: w - 0.7, h: 0.6,
+        fontFace: "Arial Black", fontSize: 22, color: subColor, bold: true,
+        align: "center", valign: "middle", margin: 0, charSpacing: 2
+      });
+      s.addText("Add to the on_call_rotation sheet", {
+        x: x + 0.35, y: 4.0, w: w - 0.7, h: 0.4,
+        fontFace: "Arial", fontSize: 12, color: subColor, italic: true,
+        align: "center", valign: "middle", margin: 0
+      });
+      return;
+    }
+
+    s.addText("PRIMARY TECH", {
+      x: x + 0.35, y: 1.95, w: w - 0.7, h: 0.35,
+      fontFace: "Arial", fontSize: 11, color: subColor, bold: true,
+      valign: "middle", margin: 0, charSpacing: 3
+    });
+    s.addText(entry.primaryName, {
+      x: x + 0.35, y: 2.3, w: w - 0.7, h: 0.95,
+      fontFace: "Arial Black", fontSize: 32, color: textColor, bold: true,
+      valign: "middle", margin: 0
+    });
+
+    // Phone
+    s.addImage({ data: dark ? icons.phoneYellowSm : icons.phoneNavy,
+      x: x + 0.35, y: 3.45, w: 0.28, h: 0.28 });
+    s.addText(formatPhone(entry.primaryMobile) || "(no number on file)", {
+      x: x + 0.75, y: 3.4, w: w - 1.1, h: 0.4,
+      fontFace: "Arial", fontSize: 16, color: textColor, bold: true,
+      valign: "middle", margin: 0
+    });
+
+    // Email
+    s.addImage({ data: dark ? icons.envelopeYellow : icons.envelopeNavy,
+      x: x + 0.35, y: 3.95, w: 0.28, h: 0.28 });
+    s.addText(entry.primaryEmail || "(no email on file)", {
+      x: x + 0.75, y: 3.9, w: w - 1.1, h: 0.4,
+      fontFace: "Arial", fontSize: 12, color: textColor,
+      valign: "middle", margin: 0
+    });
+
+    // Divider
+    s.addShape("line", { x: x + 0.35, y: 4.65, w: w - 0.7, h: 0,
+      line: { color: dividerColor, width: 1 } });
+
+    // Dispatch
+    s.addText("DISPATCH / OFFICE", {
+      x: x + 0.35, y: 4.8, w: w - 0.7, h: 0.3,
+      fontFace: "Arial", fontSize: 11, color: labelColor, bold: true,
+      valign: "middle", margin: 0, charSpacing: 3
+    });
+    s.addText(entry.dispatcher || "—", {
+      x: x + 0.35, y: 5.1, w: w - 0.7, h: 0.5,
+      fontFace: "Arial Black", fontSize: 22, color: textColor, bold: true,
+      valign: "middle", margin: 0
+    });
+
+    // Material runs
+    s.addText("MATERIAL RUNS", {
+      x: x + 0.35, y: 5.7, w: w - 0.7, h: 0.3,
+      fontFace: "Arial", fontSize: 11, color: labelColor, bold: true,
+      valign: "middle", margin: 0, charSpacing: 3
+    });
+    s.addText(entry.materialRuns || "—", {
+      x: x + 0.35, y: 6.0, w: w - 0.7, h: 0.5,
+      fontFace: "Arial Black", fontSize: 22, color: textColor, bold: true,
+      valign: "middle", margin: 0
+    });
+  };
+
+  // Left card: THIS WEEK
+  drawCard({
+    x: 0.5, w: 6.0,
+    label: "THIS WEEK",
+    dark: true,
+    entry: onCall?.current,
+    accent: YELLOW,
   });
 
-  const techName = onCall?.primaryName || "[ NOT SET ]";
-  s.addText(techName, {
-    x: 0.85, y: 1.9, w: 5.5, h: 1.2,
-    fontFace: "Arial Black", fontSize: 40, color: WHITE, bold: true,
-    valign: "middle", margin: 0
-  });
-
-  s.addImage({ data: icons.phoneYellowSm, x: 0.85, y: 3.4, w: 0.32, h: 0.32 });
-  s.addText(formatPhone(onCall?.primaryMobile) || "(no number on file)", {
-    x: 1.3, y: 3.35, w: 5.0, h: 0.4,
-    fontFace: "Arial", fontSize: 18, color: WHITE, bold: true,
-    valign: "middle", margin: 0
-  });
-
-  s.addImage({ data: icons.envelopeYellow, x: 0.85, y: 3.95, w: 0.32, h: 0.32 });
-  s.addText(onCall?.primaryEmail || "(no email on file)", {
-    x: 1.3, y: 3.9, w: 5.0, h: 0.4,
-    fontFace: "Arial", fontSize: 14, color: WHITE,
-    valign: "middle", margin: 0
-  });
-
-  s.addShape("line", { x: 0.85, y: 4.7, w: 5.3, h: 0, line: { color: STEEL, width: 1 } });
-
-  s.addText("DISPATCH / OFFICE", {
-    x: 0.85, y: 4.9, w: 5.5, h: 0.35,
-    fontFace: "Arial", fontSize: 12, color: YELLOW, bold: true,
-    valign: "middle", margin: 0, charSpacing: 3
-  });
-  s.addText(onCall?.dispatcher || "[ NOT SET ]", {
-    x: 0.85, y: 5.2, w: 5.5, h: 0.5,
-    fontFace: "Arial Black", fontSize: 28, color: WHITE, bold: true,
-    valign: "middle", margin: 0
-  });
-
-  s.addShape("rect", { x: 6.85, y: 1.2, w: 6.0, h: 5.6, fill: { color: YELLOW }, line: { color: YELLOW } });
-  s.addImage({ data: icons.phoneNavy, x: 9.45, y: 1.5, w: 0.8, h: 0.8 });
-  s.addText("EMERGENCY LINE", {
-    x: 6.85, y: 2.4, w: 6.0, h: 0.5,
-    fontFace: "Arial Black", fontSize: 22, color: NAVY_DARK, bold: true,
-    align: "center", valign: "middle", margin: 0, charSpacing: 4
-  });
-  s.addText("(610) 269-0299", {
-    x: 6.85, y: 3.0, w: 6.0, h: 1.2,
-    fontFace: "Arial Black", fontSize: 48, color: NAVY_DARK, bold: true,
-    align: "center", valign: "middle", margin: 0
-  });
-  s.addText("24 / 7", {
-    x: 6.85, y: 4.3, w: 6.0, h: 1.1,
-    fontFace: "Arial Black", fontSize: 60, color: NAVY_DARK, bold: true,
-    align: "center", valign: "middle", margin: 0, charSpacing: 6
-  });
-  s.addShape("line", { x: 7.5, y: 5.7, w: 4.7, h: 0, line: { color: NAVY_DARK, width: 2 } });
-  s.addText("ANSWER WITHIN 3 RINGS", {
-    x: 6.85, y: 5.85, w: 6.0, h: 0.4,
-    fontFace: "Arial", fontSize: 16, color: NAVY_DARK, bold: true,
-    align: "center", valign: "middle", margin: 0, charSpacing: 2
-  });
-  s.addText("Log every call in HCP before dispatch", {
-    x: 6.85, y: 6.25, w: 6.0, h: 0.4,
-    fontFace: "Arial", fontSize: 13, color: NAVY_DARK, italic: true,
-    align: "center", valign: "middle", margin: 0
+  // Right card: NEXT WEEK
+  drawCard({
+    x: 6.85, w: 6.0,
+    label: "NEXT WEEK  —  HEADS UP",
+    dark: false,
+    entry: onCall?.next,
+    accent: NAVY_DARK,
   });
 
   addFooter(s, pres, slideLabel);
@@ -487,6 +538,7 @@ function buildMovedItemsSlide(s, pres, icons, { movedItems }, slideLabel) {
   addFooter(s, pres, slideLabel);
 }
 
+// Job Board — stretched rows + totals strip
 function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "THIS WEEK'S JOB BOARD", icons.clipboard);
@@ -494,6 +546,7 @@ function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
   const leftX = 0.5, leftW = 8.3;
   const rightX = 9.0, rightW = 3.83;
 
+  // Left panel
   s.addShape("rect", { x: leftX, y: 1.15, w: leftW, h: 5.85,
     fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
     shadow: { type: "outer", color: "000000", blur: 8, offset: 2, angle: 90, opacity: 0.08 } });
@@ -505,13 +558,16 @@ function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
   s.addShape("line", { x: leftX + 0.3, y: 1.85, w: leftW - 0.6, h: 0, line: { color: YELLOW, width: 3 } });
 
   const days = ["MON", "TUE", "WED", "THU", "FRI"];
-  const jobStartY = 2.05;
-  const jobRowH = 0.92;
+  const jobsAreaY = 2.0;
+  const jobsAreaH = 4.0;        // 5 rows fill 4 inches
+  const totalsStripY = 6.05;    // strip starts at 6.05
+  const totalsStripH = 0.85;    // strip is ~0.85 inches tall
+  const jobRowH = jobsAreaH / 5;
 
   for (let i = 0; i < days.length; i++) {
     const day = days[i];
     const j = jobBoard?.majors?.[day] || null;
-    const y = jobStartY + i * jobRowH;
+    const y = jobsAreaY + i * jobRowH;
 
     if (i % 2 === 0) {
       s.addShape("rect", {
@@ -520,37 +576,77 @@ function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
       });
     }
 
-    s.addShape("rect", { x: leftX + 0.4, y: y + 0.2, w: 0.7, h: 0.45,
+    // Day pill
+    s.addShape("rect", { x: leftX + 0.4, y: y + jobRowH/2 - 0.25, w: 0.8, h: 0.5,
       fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
     s.addText(day, {
-      x: leftX + 0.4, y: y + 0.2, w: 0.7, h: 0.45,
-      fontFace: "Arial Black", fontSize: 13, color: YELLOW, bold: true,
+      x: leftX + 0.4, y: y + jobRowH/2 - 0.25, w: 0.8, h: 0.5,
+      fontFace: "Arial Black", fontSize: 14, color: YELLOW, bold: true,
       align: "center", valign: "middle", margin: 0, charSpacing: 2
     });
 
+    // Description block
     s.addText(j ? "TOP JOB" : "", {
-      x: leftX + 1.25, y: y + 0.08, w: 3.8, h: 0.35,
-      fontFace: "Arial", fontSize: 11, color: GRAY_MUTED, bold: true,
+      x: leftX + 1.35, y: y + 0.1, w: 4.2, h: 0.3,
+      fontFace: "Arial", fontSize: 10, color: GRAY_MUTED, bold: true,
       valign: "middle", margin: 0, charSpacing: 1
     });
     s.addText(j ? j.description.slice(0, 60) : "(no scheduled work)", {
-      x: leftX + 1.25, y: y + 0.4, w: 3.8, h: 0.4,
-      fontFace: "Arial Black", fontSize: 14, color: NAVY_DARK, bold: true,
+      x: leftX + 1.35, y: y + 0.36, w: 4.2, h: 0.4,
+      fontFace: "Arial Black", fontSize: 16, color: NAVY_DARK, bold: true,
       valign: "middle", margin: 0
     });
 
+    // Tech
     s.addText(j ? j.techDisplay : "", {
-      x: leftX + 5.15, y: y + 0.2, w: 1.5, h: 0.45,
-      fontFace: "Arial", fontSize: 12, color: GRAY_TEXT, bold: true,
+      x: leftX + 5.7, y: y + jobRowH/2 - 0.2, w: 1.6, h: 0.4,
+      fontFace: "Arial", fontSize: 13, color: GRAY_TEXT, bold: true,
       align: "center", valign: "middle", margin: 0
     });
+    // Duration
     s.addText(j ? j.durationLabel : "", {
-      x: leftX + 6.7, y: y + 0.2, w: 1.3, h: 0.45,
-      fontFace: "Arial", fontSize: 13, color: NAVY_DARK, bold: true,
+      x: leftX + 7.35, y: y + jobRowH/2 - 0.2, w: 0.85, h: 0.4,
+      fontFace: "Arial", fontSize: 14, color: NAVY_DARK, bold: true,
       align: "right", valign: "middle", margin: 0
     });
   }
 
+  // Totals strip at bottom of left panel
+  const breakdown = jobBoard?.breakdown || { service: 0, install: 0, estimate: 0, other: 0 };
+  s.addShape("rect", {
+    x: leftX + 0.3, y: totalsStripY, w: leftW - 0.6, h: totalsStripH,
+    fill: { color: NAVY_DARK }, line: { color: NAVY_DARK }
+  });
+
+  const stripCells = [
+    { label: "SERVICE",  value: breakdown.service },
+    { label: "INSTALLS", value: breakdown.install },
+    { label: "ESTIMATES",value: breakdown.estimate },
+    { label: "OTHER",    value: breakdown.other },
+  ];
+  const cellW = (leftW - 0.6) / 4;
+  for (let i = 0; i < stripCells.length; i++) {
+    const c = stripCells[i];
+    const cx = leftX + 0.3 + i * cellW;
+    s.addText(c.label, {
+      x: cx, y: totalsStripY + 0.08, w: cellW, h: 0.3,
+      fontFace: "Arial", fontSize: 10, color: YELLOW, bold: true,
+      align: "center", valign: "middle", margin: 0, charSpacing: 2
+    });
+    s.addText(String(c.value), {
+      x: cx, y: totalsStripY + 0.36, w: cellW, h: 0.45,
+      fontFace: "Arial Black", fontSize: 22, color: WHITE, bold: true,
+      align: "center", valign: "middle", margin: 0
+    });
+    if (i < stripCells.length - 1) {
+      s.addShape("line", {
+        x: cx + cellW, y: totalsStripY + 0.15, w: 0, h: totalsStripH - 0.3,
+        line: { color: STEEL, width: 1 }
+      });
+    }
+  }
+
+  // Right side stat cards
   const statCard = (x, y, label, value, accent = YELLOW) => {
     s.addShape("rect", { x, y, w: rightW, h: 1.8,
       fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
@@ -677,7 +773,6 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
     return;
   }
 
-  // Build the union of techs from both windows
   const techMap = new Map();
   for (const r of hygiene.last30) techMap.set(r.employeeId, { d30: r, d7: null });
   for (const r of hygiene.last7) {
@@ -978,7 +1073,6 @@ function buildKPIsSlide(s, pres, icons, { kpis }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "WEEKLY GOALS & NUMBERS", icons.fire);
 
-  // Top row of 4 stat tiles
   const stats = [
     { label: "JOBS CLOSED",  value: String(kpis?.jobsClosed ?? 0), sub: "LAST WEEK", color: YELLOW },
     { label: "REVENUE",      value: kpis?.revenueDisplay ?? "$0",  sub: "LAST WEEK", color: GREEN_OK },
@@ -1015,7 +1109,6 @@ function buildKPIsSlide(s, pres, icons, { kpis }, slideLabel) {
     });
   }
 
-  // Bottom: bar chart of jobs completed by tech
   const chartY = 3.2;
   const chartH = 3.65;
 
@@ -1039,7 +1132,6 @@ function buildKPIsSlide(s, pres, icons, { kpis }, slideLabel) {
       align: "center", valign: "middle", margin: 0
     });
   } else {
-    // Native pptxgenjs bar chart
     const chartData = [{
       name: "Jobs Completed",
       labels: byTech.map(r => r.name),
@@ -1082,6 +1174,7 @@ export async function renderDeck(data, outputPath) {
     phoneYellowSm:  await iconPng(FaPhone, "#FFD000", 320),
     phoneNavy:      await iconPng(FaPhone, "#0F1E3A", 320),
     envelopeYellow: await iconPng(FaEnvelope, "#FFD000", 320),
+    envelopeNavy:   await iconPng(FaEnvelope, "#0F1E3A", 320),
     calendar:       await iconPng(FaCalendarAlt, "#FFFFFF", 320),
     boxOpen:        await iconPng(FaBoxOpen, "#FFFFFF", 320),
     exchange:       await iconPng(FaExchangeAlt, "#FFFFFF", 320),
@@ -1128,7 +1221,13 @@ export async function renderDeck(data, outputPath) {
 
   for (let i = 0; i < plan.length; i++) {
     const item = plan[i];
-    const s = pres.addSlide();
+    const s = pres.addSlide({
+      slideTransition: {
+        type: "fade",
+        advanceOnTime: SLIDE_ADVANCE_SECONDS,
+        advanceOnClick: true,
+      },
+    });
     const labelStr = labelFor(i);
     switch (item.key) {
       case "cover":
