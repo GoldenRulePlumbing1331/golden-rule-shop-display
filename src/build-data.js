@@ -11,6 +11,7 @@ import {
   getCompletedJobsInRange,
   rollupKPIs,
   getEmployeeRoster,
+  getTagDurations,
 } from "./jobs.js";
 import { readSheet, readCalendarEvents } from "./google.js";
 
