@@ -26,12 +26,13 @@ const SLIDE_TIMINGS = {
   oncall:       12,
   events:       15,
   newitems:     15,
-  moveditems:   15,
+  reviews:      18,
   jobboard:     20,
   tagdurations: 20,
   hygiene:      25,
   safety:       18,
   shoutout:     12,
+  serviceareas: 18,
   kpis:         20,
 };
 
@@ -152,7 +153,7 @@ function buildCSS() {
     }
     .header-bar .title {
       font-family: 'Arial Black', 'Arial', sans-serif;
-      font-size: 2.6vw;
+      font-size: 2.4vw;
       font-weight: 900;
       color: ${COLORS.WHITE};
       letter-spacing: 0.04em;
@@ -280,7 +281,7 @@ function buildCSS() {
       top: 11.3%; left: 0; right: 0; bottom: 4.7%;
     }
 
-    /* On Call — split into THIS WEEK / NEXT WEEK */
+    /* On Call */
     .oncall .card {
       position: absolute;
       top: 1.2%;
@@ -321,7 +322,6 @@ function buildCSS() {
     }
     .oncall .card.this-week .week-label { color: ${COLORS.YELLOW}; }
     .oncall .card.next-week .week-label { color: ${COLORS.NAVY}; }
-
     .oncall .role-label {
       font-size: 0.9vw;
       font-weight: bold;
@@ -330,7 +330,6 @@ function buildCSS() {
     }
     .oncall .card.this-week .role-label { color: ${COLORS.STEEL_LIGHT}; }
     .oncall .card.next-week .role-label { color: ${COLORS.GRAY_TEXT}; }
-
     .oncall .name {
       font-family: 'Arial Black', sans-serif;
       font-size: 3vw;
@@ -340,7 +339,6 @@ function buildCSS() {
     }
     .oncall .card.this-week .name { color: ${COLORS.WHITE}; }
     .oncall .card.next-week .name { color: ${COLORS.NAVY_DARK}; }
-
     .oncall .contact-row {
       font-size: 1.2vw;
       font-weight: bold;
@@ -354,13 +352,11 @@ function buildCSS() {
     .oncall .card.this-week .email-row { color: ${COLORS.WHITE}; }
     .oncall .card.next-week .contact-row,
     .oncall .card.next-week .email-row { color: ${COLORS.NAVY_DARK}; }
-
     .oncall .divider {
       margin: 2% 0;
     }
     .oncall .card.this-week .divider { border-top: 1px solid ${COLORS.STEEL}; }
     .oncall .card.next-week .divider { border-top: 1px solid ${COLORS.GRAY_LINE}; }
-
     .oncall .field-label {
       font-size: 0.85vw;
       font-weight: bold;
@@ -370,7 +366,6 @@ function buildCSS() {
     }
     .oncall .card.this-week .field-label { color: ${COLORS.YELLOW}; }
     .oncall .card.next-week .field-label { color: ${COLORS.NAVY}; }
-
     .oncall .field-value {
       font-family: 'Arial Black', sans-serif;
       font-size: 1.8vw;
@@ -378,7 +373,6 @@ function buildCSS() {
     }
     .oncall .card.this-week .field-value { color: ${COLORS.WHITE}; }
     .oncall .card.next-week .field-value { color: ${COLORS.NAVY_DARK}; }
-
     .oncall .placeholder {
       display: flex;
       flex-direction: column;
@@ -567,70 +561,82 @@ function buildCSS() {
       flex: 1;
     }
 
-    /* Moved items list */
-    .moved-list {
+    /* Reviews slide */
+    .reviews-list {
       position: absolute;
-      top: 7%; left: 3.75%; right: 3.75%; bottom: 9%;
+      top: 1%; left: 3.75%; right: 3.75%; bottom: 9%;
       display: flex;
       flex-direction: column;
-      gap: 1.8%;
+      gap: 1.4%;
     }
-    .moved-row {
+    .review-card {
       flex: 1;
       background: ${COLORS.WHITE};
       border: 1px solid ${COLORS.GRAY_LINE};
-      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       position: relative;
+      padding: 2% 3% 2% 4%;
       display: flex;
-      align-items: center;
-      padding: 0 2.5%;
-      gap: 2%;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
     }
-    .moved-row::before {
+    .review-card::before {
       content: "";
       position: absolute;
       left: 0; top: 0; bottom: 0;
       width: 1.1%;
       background: ${COLORS.YELLOW};
     }
-    .moved-row .name {
-      font-family: 'Arial Black', sans-serif;
+    .review-card .top-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 2%;
+    }
+    .review-card .quote-icon {
       color: ${COLORS.NAVY_DARK};
-      font-size: 1.4vw;
-      font-weight: 900;
-      width: 25%;
-    }
-    .moved-row .old-block, .moved-row .new-block {
-      padding: 1.5% 2%;
-      flex: 1;
-    }
-    .moved-row .old-block {
-      background: ${COLORS.STEEL_LIGHT};
-      border: 1px solid ${COLORS.GRAY_LINE};
-    }
-    .moved-row .arrow {
-      color: ${COLORS.YELLOW};
-      font-size: 2.5vw;
+      font-size: 2.2vw;
       flex-shrink: 0;
+      line-height: 1;
+      margin-top: 0.3%;
     }
-    .moved-row .new-block {
-      background: ${COLORS.NAVY_DARK};
+    .review-card .text {
+      flex: 1;
+      color: ${COLORS.NAVY_DARK};
+      font-size: 1.15vw;
+      line-height: 1.4;
+      font-style: italic;
+      padding: 0 2%;
     }
-    .moved-row .block-label {
-      font-size: 0.7vw;
-      font-weight: bold;
+    .review-card .stars {
+      flex-shrink: 0;
+      font-size: 1.3vw;
+      letter-spacing: 0.08em;
+      color: ${COLORS.YELLOW};
+    }
+    .review-card .stars .gray { color: ${COLORS.GRAY_LINE}; }
+    .review-card .bottom-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1.5%;
+      padding-left: 2.5%;
+    }
+    .review-card .customer {
+      font-family: 'Arial Black', sans-serif;
+      color: ${COLORS.GRAY_TEXT};
+      font-size: 0.95vw;
+      font-weight: 900;
+    }
+    .review-card .tech-praise {
+      font-family: 'Arial Black', sans-serif;
+      color: ${COLORS.GREEN_OK};
+      font-size: 0.9vw;
+      font-weight: 900;
       letter-spacing: 0.14em;
-      margin-bottom: 0.3%;
     }
-    .moved-row .old-block .block-label { color: ${COLORS.GRAY_MUTED}; }
-    .moved-row .new-block .block-label { color: ${COLORS.YELLOW}; }
-    .moved-row .block-value {
-      font-size: 1.1vw;
-      font-weight: bold;
-    }
-    .moved-row .old-block .block-value { color: ${COLORS.GRAY_TEXT}; }
-    .moved-row .new-block .block-value { color: ${COLORS.WHITE}; }
-    .moved-banner {
+    .reviews-banner {
       position: absolute;
       left: 3.75%; right: 3.75%; bottom: 1%;
       height: 6%;
@@ -642,10 +648,10 @@ function buildCSS() {
       color: ${COLORS.NAVY_DARK};
       font-size: 1vw;
       font-weight: 900;
-      letter-spacing: 0.16em;
+      letter-spacing: 0.18em;
     }
 
-    /* Job Board — stretched rows + totals strip */
+    /* Job Board */
     .jobboard-left {
       position: absolute;
       top: 1%; left: 3.75%; bottom: 1%;
@@ -681,9 +687,7 @@ function buildCSS() {
       padding: 0 1%;
       min-height: 0;
     }
-    .job-row.alt {
-      background: ${COLORS.STEEL_LIGHT};
-    }
+    .job-row.alt { background: ${COLORS.STEEL_LIGHT}; }
     .job-row .day-pill {
       width: 8%;
       background: ${COLORS.NAVY_DARK};
@@ -746,9 +750,7 @@ function buildCSS() {
       border-right: 1px solid ${COLORS.STEEL};
       padding: 0.5% 0;
     }
-    .jobboard-totals .cell:last-child {
-      border-right: none;
-    }
+    .jobboard-totals .cell:last-child { border-right: none; }
     .jobboard-totals .cell .label {
       color: ${COLORS.YELLOW};
       font-size: 0.85vw;
@@ -762,7 +764,6 @@ function buildCSS() {
       font-size: 2vw;
       font-weight: 900;
     }
-
     .jobboard-right {
       position: absolute;
       top: 1%; right: 3.75%; bottom: 1%;
@@ -903,9 +904,7 @@ function buildCSS() {
       align-items: center;
       padding: 0 1.5%;
     }
-    .tt-row.head .tt-cell.center {
-      justify-content: center;
-    }
+    .tt-row.head .tt-cell.center { justify-content: center; }
     .tt-row.head .tt-cell.banner-30 { background: ${COLORS.NAVY}; }
     .tt-row.head .tt-cell.banner-7 { background: ${COLORS.STEEL}; }
     .tt-row.subhead {
@@ -983,7 +982,6 @@ function buildCSS() {
     .pct.yellow { background: #FFF9C4; color: ${COLORS.NAVY_DARK}; }
     .pct.red { background: #FFCDD2; color: ${COLORS.RED_ALERT}; }
     .pct.empty { background: ${COLORS.STEEL_LIGHT}; color: ${COLORS.GRAY_MUTED}; }
-
     .tt-leader {
       position: absolute;
       left: 3.75%; right: 3.75%; bottom: 1%;
@@ -1043,9 +1041,7 @@ function buildCSS() {
       list-style-type: disc;
       padding-left: 1.2em;
     }
-    .safety-bullets li {
-      margin-bottom: 1%;
-    }
+    .safety-bullets li { margin-bottom: 1%; }
     .safety-banner {
       position: absolute;
       left: 3%; right: 3%; bottom: 3%;
@@ -1085,9 +1081,7 @@ function buildCSS() {
       align-self: stretch;
       background: ${COLORS.YELLOW};
     }
-    .safety-tile .body {
-      flex: 1;
-    }
+    .safety-tile .body { flex: 1; }
     .safety-tile .label {
       font-family: 'Arial Black', sans-serif;
       color: ${COLORS.NAVY_DARK};
@@ -1160,6 +1154,79 @@ function buildCSS() {
       text-align: center;
       max-width: 75%;
       line-height: 1.4;
+    }
+
+    /* Service Areas */
+    .areas-list {
+      position: absolute;
+      top: 7%; left: 3.75%; right: 3.75%; bottom: 9%;
+      display: flex;
+      flex-direction: column;
+      gap: 1%;
+    }
+    .area-row {
+      flex: 1;
+      background: ${COLORS.WHITE};
+      border: 1px solid ${COLORS.GRAY_LINE};
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      display: grid;
+      grid-template-columns: 5% 30% 1fr 12%;
+      align-items: stretch;
+      overflow: hidden;
+    }
+    .area-row .rank {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Arial Black', sans-serif;
+      font-size: 1.4vw;
+      font-weight: 900;
+      background: ${COLORS.NAVY_DARK};
+      color: ${COLORS.YELLOW};
+    }
+    .area-row.leader .rank {
+      background: ${COLORS.YELLOW};
+      color: ${COLORS.NAVY_DARK};
+    }
+    .area-row .city {
+      display: flex;
+      align-items: center;
+      padding-left: 2%;
+      font-family: 'Arial Black', sans-serif;
+      color: ${COLORS.NAVY_DARK};
+      font-size: 1.5vw;
+      font-weight: 900;
+    }
+    .area-row .bar-track {
+      display: flex;
+      align-items: center;
+      padding: 0 2%;
+    }
+    .area-row .bar-bg {
+      flex: 1;
+      height: 50%;
+      background: ${COLORS.STEEL_LIGHT};
+      border: 1px solid ${COLORS.GRAY_LINE};
+      position: relative;
+      overflow: hidden;
+    }
+    .area-row .bar-fill {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      background: ${COLORS.NAVY};
+    }
+    .area-row.leader .bar-fill {
+      background: ${COLORS.YELLOW};
+    }
+    .area-row .count {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 3%;
+      font-family: 'Arial Black', sans-serif;
+      color: ${COLORS.NAVY_DARK};
+      font-size: 1.5vw;
+      font-weight: 900;
     }
 
     /* KPIs / Goals */
@@ -1309,7 +1376,6 @@ function buildCoverSlideHTML({ weekHumanLabel, onCall }) {
   `;
 }
 
-// On Call slide — split into THIS WEEK / NEXT WEEK
 function buildOnCallSlideHTML({ onCall }, slideLabel) {
   const renderCardBody = (entry) => {
     if (!entry) {
@@ -1334,7 +1400,6 @@ function buildOnCallSlideHTML({ onCall }, slideLabel) {
       <div class="field-value">${escapeHtml(entry.materialRuns || "—")}</div>
     `;
   };
-
   return `
     ${htmlHeader("ON CALL")}
     <div class="slide-body oncall">
@@ -1428,29 +1493,57 @@ function buildNewItemsSlideHTML({ newItems }, slideLabel) {
   `;
 }
 
-function buildMovedItemsSlideHTML({ movedItems }, slideLabel) {
-  const rows = [...movedItems];
-  while (rows.length < 3) rows.push(null);
-  const rowHTML = rows.slice(0, 3).map(m => `
-    <div class="moved-row">
-      <div class="name">${escapeHtml(m ? m.name.toUpperCase() : "(no moved item)")}</div>
-      <div class="old-block">
-        <div class="block-label">OLD LOCATION</div>
-        <div class="block-value">${escapeHtml(m ? m.oldLocation : "—")}</div>
+// NEW: Reviews slide
+function buildReviewsSlideHTML({ googleReviews }, slideLabel) {
+  const reviews = (googleReviews || []).slice(0, 3);
+
+  if (reviews.length === 0) {
+    return `
+      ${htmlHeader("5-STAR REVIEWS — WHAT CUSTOMERS ARE SAYING")}
+      <div class="slide-body">
+        <div style="text-align:center; margin-top: 25%; color: ${COLORS.GRAY_MUTED}; font-size: 1.4vw; font-style: italic;">
+          (no featured reviews — add to the google_reviews sheet)
+        </div>
       </div>
-      <div class="arrow">→</div>
-      <div class="new-block">
-        <div class="block-label">NEW LOCATION</div>
-        <div class="block-value">${escapeHtml(m ? m.newLocation : "—")}</div>
+      ${htmlFooter(slideLabel)}
+    `;
+  }
+
+  const renderStars = (count) => {
+    let s = "";
+    for (let i = 0; i < 5; i++) {
+      s += i < count ? "★" : `<span class="gray">★</span>`;
+    }
+    return s;
+  };
+
+  const cardHTML = reviews.map(r => {
+    const customerLine = r.location
+      ? `— ${escapeHtml(r.customerName)}, ${escapeHtml(r.location)}`
+      : `— ${escapeHtml(r.customerName)}`;
+    const techPraise = r.techDisplay
+      ? `<div class="tech-praise">👏 PRAISED: ${escapeHtml(r.techDisplay.toUpperCase())}</div>`
+      : "";
+    return `
+      <div class="review-card">
+        <div class="top-row">
+          <div class="quote-icon">"</div>
+          <div class="text">${escapeHtml(r.text)}</div>
+          <div class="stars">${renderStars(r.stars)}</div>
+        </div>
+        <div class="bottom-row">
+          <div class="customer">${customerLine}</div>
+          ${techPraise}
+        </div>
       </div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
+
   return `
-    ${htmlHeader("MOVED & REARRANGED")}
+    ${htmlHeader("5-STAR REVIEWS — WHAT CUSTOMERS ARE SAYING")}
     <div class="slide-body">
-      <div class="subhead">IF YOU CAN'T FIND SOMETHING — CHECK HERE FIRST</div>
-      <div class="moved-list">${rowHTML}</div>
-      <div class="moved-banner">UPDATE HCP INVENTORY LOCATIONS WHEN ITEMS MOVE</div>
+      <div class="reviews-list">${cardHTML}</div>
+      <div class="reviews-banner">THIS IS WHAT 5-STAR WORK LOOKS LIKE  —  KEEP IT UP</div>
     </div>
     ${htmlFooter(slideLabel)}
   `;
@@ -1484,37 +1577,16 @@ function buildJobBoardSlideHTML({ jobBoard }, slideLabel) {
         <div class="header">MAJOR JOBS — THIS WEEK</div>
         <div class="jobboard-rows">${rowHTML}</div>
         <div class="jobboard-totals">
-          <div class="cell">
-            <div class="label">SERVICE</div>
-            <div class="value">${breakdown.service}</div>
-          </div>
-          <div class="cell">
-            <div class="label">INSTALLS</div>
-            <div class="value">${breakdown.install}</div>
-          </div>
-          <div class="cell">
-            <div class="label">ESTIMATES</div>
-            <div class="value">${breakdown.estimate}</div>
-          </div>
-          <div class="cell">
-            <div class="label">OTHER</div>
-            <div class="value">${breakdown.other}</div>
-          </div>
+          <div class="cell"><div class="label">SERVICE</div><div class="value">${breakdown.service}</div></div>
+          <div class="cell"><div class="label">INSTALLS</div><div class="value">${breakdown.install}</div></div>
+          <div class="cell"><div class="label">ESTIMATES</div><div class="value">${breakdown.estimate}</div></div>
+          <div class="cell"><div class="label">OTHER</div><div class="value">${breakdown.other}</div></div>
         </div>
       </div>
       <div class="jobboard-right">
-        <div class="stat-card yellow">
-          <div class="label">OPEN JOBS</div>
-          <div class="value">${counts.open}</div>
-        </div>
-        <div class="stat-card navy">
-          <div class="label">IN PROGRESS</div>
-          <div class="value">${counts.inProgress}</div>
-        </div>
-        <div class="stat-card red">
-          <div class="label">TOTAL THIS WK</div>
-          <div class="value">${counts.total}</div>
-        </div>
+        <div class="stat-card yellow"><div class="label">OPEN JOBS</div><div class="value">${counts.open}</div></div>
+        <div class="stat-card navy"><div class="label">IN PROGRESS</div><div class="value">${counts.inProgress}</div></div>
+        <div class="stat-card red"><div class="label">TOTAL THIS WK</div><div class="value">${counts.total}</div></div>
       </div>
     </div>
     ${htmlFooter(slideLabel)}
@@ -1669,34 +1741,10 @@ function buildSafetySlideHTML({ safetyTopic }, slideLabel) {
         <div class="safety-banner">QUESTIONS?  ASK YOUR LEAD BEFORE YOU START THE JOB</div>
       </div>
       <div class="safety-right">
-        <div class="safety-tile">
-          <div class="accent"></div>
-          <div class="body">
-            <div class="label">VAN CHECK</div>
-            <div class="text">Walk-around + fluids — every Monday AM</div>
-          </div>
-        </div>
-        <div class="safety-tile">
-          <div class="accent"></div>
-          <div class="body">
-            <div class="label">PPE</div>
-            <div class="text">Boots, eyes, gloves, hard hat on every job</div>
-          </div>
-        </div>
-        <div class="safety-tile">
-          <div class="accent"></div>
-          <div class="body">
-            <div class="label">HCP UPDATES</div>
-            <div class="text">Close job + notes before leaving the site</div>
-          </div>
-        </div>
-        <div class="safety-tile">
-          <div class="accent"></div>
-          <div class="body">
-            <div class="label">TOOL ACCOUNTABILITY</div>
-            <div class="text">Scan in/out of the crib — no exceptions</div>
-          </div>
-        </div>
+        <div class="safety-tile"><div class="accent"></div><div class="body"><div class="label">VAN CHECK</div><div class="text">Walk-around + fluids — every Monday AM</div></div></div>
+        <div class="safety-tile"><div class="accent"></div><div class="body"><div class="label">PPE</div><div class="text">Boots, eyes, gloves, hard hat on every job</div></div></div>
+        <div class="safety-tile"><div class="accent"></div><div class="body"><div class="label">HCP UPDATES</div><div class="text">Close job + notes before leaving the site</div></div></div>
+        <div class="safety-tile"><div class="accent"></div><div class="body"><div class="label">TOOL ACCOUNTABILITY</div><div class="text">Scan in/out of the crib — no exceptions</div></div></div>
       </div>
     </div>
     ${htmlFooter(slideLabel)}
@@ -1716,6 +1764,56 @@ function buildShoutoutSlideHTML({ shoutout }, slideLabel) {
         <div class="shoutout-why">WHY THEY'RE GETTING RECOGNIZED</div>
         <div class="shoutout-reason">${escapeHtml(shoutout.reason || "")}</div>
       </div>
+    </div>
+    ${htmlFooter(slideLabel)}
+  `;
+}
+
+// NEW: Service Areas slide
+function buildServiceAreasSlideHTML({ serviceAreas }, slideLabel) {
+  const days = serviceAreas?.daysBack || 30;
+  const total = serviceAreas?.totalJobs || 0;
+  const cities = serviceAreas?.cities || [];
+
+  if (cities.length === 0) {
+    return `
+      ${htmlHeader("SERVICE AREAS — WHERE THE WORK IS")}
+      <div class="slide-body">
+        <div class="subhead">COMPLETED JOBS BY CITY — LAST ${days} DAYS</div>
+        <div style="text-align:center; margin-top: 25%; color: ${COLORS.GRAY_MUTED}; font-size: 1.4vw; font-style: italic;">
+          (no completed job data available)
+        </div>
+      </div>
+      ${htmlFooter(slideLabel)}
+    `;
+  }
+
+  const maxCount = cities[0]?.count || 1;
+  const visible = cities.slice(0, 7);
+
+  const rowHTML = visible.map((c, i) => {
+    const isLeader = i === 0;
+    const pct = (c.count / maxCount) * 100;
+    return `
+      <div class="area-row${isLeader ? " leader" : ""}">
+        <div class="rank">#${i + 1}</div>
+        <div class="city">${escapeHtml(c.city.toUpperCase())}</div>
+        <div class="bar-track">
+          <div class="bar-bg">
+            <div class="bar-fill" style="width: ${pct}%;"></div>
+          </div>
+        </div>
+        <div class="count">${c.count}</div>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    ${htmlHeader("SERVICE AREAS — WHERE THE WORK IS")}
+    <div class="slide-body">
+      <div class="subhead">COMPLETED JOBS BY CITY — LAST ${days} DAYS  ·  ${total} TOTAL JOBS</div>
+      <div class="areas-list">${rowHTML}</div>
+      <div class="footer-banner">KNOW YOUR TERRITORY  —  EVERY ZIP CODE IS AN OPPORTUNITY</div>
     </div>
     ${htmlFooter(slideLabel)}
   `;
@@ -1771,12 +1869,9 @@ function buildSlideshowJS(slidePlan, slideTimings) {
 
     function showSlide(idx) {
       slides.forEach((s, i) => s.classList.toggle('active', i === idx));
-
       const slide = slides[idx];
       const canvas = slide.querySelector('canvas[data-chart]');
-      if (canvas) {
-        requestAnimationFrame(() => renderBarChart(canvas));
-      }
+      if (canvas) requestAnimationFrame(() => renderBarChart(canvas));
 
       const seconds = TIMINGS[idx];
       progressBar.style.transition = 'none';
@@ -1798,7 +1893,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
       currentIndex = (currentIndex + 1) % slides.length;
       showSlide(currentIndex);
     });
-
     document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowRight' || e.key === ' ') {
         currentIndex = (currentIndex + 1) % slides.length;
@@ -1808,7 +1902,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
         showSlide(currentIndex);
       }
     });
-
     window.addEventListener('resize', () => {
       const activeCanvas = document.querySelector('.slide.active canvas[data-chart]');
       if (activeCanvas) renderBarChart(activeCanvas);
@@ -1819,7 +1912,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
-
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
       const ctx = canvas.getContext('2d');
@@ -1831,7 +1923,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
       const padL = 40, padR = 12, padT = 14, padB = 36;
       const plotW = W - padL - padR;
       const plotH = H - padT - padB;
-
       const values = data.values;
       const labels = data.labels;
       if (values.length === 0) return;
@@ -1864,7 +1955,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
         const h = (values[i] / yMax) * plotH;
         const y = padT + plotH - h;
         ctx.fillRect(x, y, barW, h);
-
         if (h > 22) {
           ctx.fillStyle = '${COLORS.WHITE}';
           ctx.textAlign = 'center';
@@ -1880,7 +1970,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
           ctx.fillText(String(values[i]), x + barW / 2, y - 4);
         }
       }
-
       ctx.fillStyle = '${COLORS.GRAY_TEXT}';
       ctx.font = 'bold 11px Arial';
       ctx.textAlign = 'center';
@@ -1890,7 +1979,6 @@ function buildSlideshowJS(slidePlan, slideTimings) {
         ctx.fillText(labels[i], x, padT + plotH + 8);
       }
     }
-
     showSlide(0);
   `;
 }
@@ -1903,12 +1991,13 @@ export async function renderHTML(data, outputPath) {
   plan.push({ key: "oncall",       label: "ON CALL" });
   plan.push({ key: "events",       label: "EVENTS" });
   plan.push({ key: "newitems",     label: "NEW ITEMS" });
-  plan.push({ key: "moveditems",   label: "MOVED" });
+  plan.push({ key: "reviews",      label: "REVIEWS" });
   plan.push({ key: "jobboard",     label: "JOB BOARD" });
   plan.push({ key: "tagdurations", label: "AVG TIMES" });
   plan.push({ key: "hygiene",      label: "TIME TRACKING" });
   if (data.safetyTopic) plan.push({ key: "safety",   label: "SAFETY" });
   if (data.shoutout)    plan.push({ key: "shoutout", label: "SHOUTOUT" });
+  plan.push({ key: "serviceareas", label: "SERVICE AREAS" });
   plan.push({ key: "kpis",         label: "GOALS" });
 
   const totalNumbered = plan.length - 1;
@@ -1938,8 +2027,8 @@ export async function renderHTML(data, outputPath) {
       case "newitems":
         inner = buildNewItemsSlideHTML({ newItems: data.newItems }, labelStr);
         break;
-      case "moveditems":
-        inner = buildMovedItemsSlideHTML({ movedItems: data.movedItems }, labelStr);
+      case "reviews":
+        inner = buildReviewsSlideHTML({ googleReviews: data.googleReviews }, labelStr);
         break;
       case "jobboard":
         inner = buildJobBoardSlideHTML({ jobBoard: data.jobBoard }, labelStr);
@@ -1955,6 +2044,9 @@ export async function renderHTML(data, outputPath) {
         break;
       case "shoutout":
         inner = buildShoutoutSlideHTML({ shoutout: data.shoutout }, labelStr);
+        break;
+      case "serviceareas":
+        inner = buildServiceAreasSlideHTML({ serviceAreas: data.serviceAreas }, labelStr);
         break;
       case "kpis":
         inner = buildKPIsSlideHTML({ kpis: data.kpis }, labelStr);
