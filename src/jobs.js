@@ -527,14 +527,23 @@ async function computeHygieneForWindow({ daysBack }) {
 
   const eligible = all.filter(j => COMPLETE_STATUSES.has(j.work_status));
 
-  // Group by lead tech
-  const byTech = new Map();
+  // Pass 1: Group by lead tech (used for compliance %s)
+  const byLeadTech = new Map();
   for (const j of eligible) {
     const employees = j.assigned_employees || [];
     if (employees.length === 0) continue;
     const lead = employees[0];
-    if (!byTech.has(lead.id)) byTech.set(lead.id, { jobs: [] });
-    byTech.get(lead.id).jobs.push(j);
+    if (!byLeadTech.has(lead.id)) byLeadTech.set(lead.id, { jobs: [] });
+    byLeadTech.get(lead.id).jobs.push(j);
+  }
+
+  // Pass 2: Count ALL assigned techs (lead + helpers) — used for "ASSIGNED" column
+  const assignedCounts = new Map();
+  for (const j of eligible) {
+    const employees = j.assigned_employees || [];
+    for (const emp of employees) {
+      assignedCounts.set(emp.id, (assignedCounts.get(emp.id) || 0) + 1);
+    }
   }
 
   // Build a row for EVERY tech in the allowlist — even if they have zero jobs.
@@ -542,20 +551,25 @@ async function computeHygieneForWindow({ daysBack }) {
   const rows = [];
   for (const t of TIME_TRACKING_TECHS) {
     const fullName = `${t.first} ${t.last}`.trim();
-    const bucket = byTech.get(t.id);
+    const bucket = byLeadTech.get(t.id);
+    const totalAssigned = assignedCounts.get(t.id) || 0;
+
     if (!bucket || bucket.jobs.length === 0) {
-      // No lead jobs in this window — show as N/A across the board
+      // No lead jobs in this window — show as N/A across compliance columns,
+      // but still display assigned count if helper-only on jobs
       rows.push({
         employeeId: t.id,
         name: fullName,
         displayName: t.display,
-        totalJobs: 0,
+        totalJobs: 0,           // lead jobs count
+        totalAssigned,           // total assigned (lead + helper)
         omwHit: 0, startHit: 0, finishHit: 0,
         omwPct: null, startPct: null, finishPct: null, overallPct: null,
       });
     } else {
       const stats = rollupTech(t.id, fullName, bucket.jobs);
       stats.displayName = t.display;
+      stats.totalAssigned = totalAssigned;
       rows.push(stats);
     }
   }
