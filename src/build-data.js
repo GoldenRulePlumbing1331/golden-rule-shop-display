@@ -15,6 +15,7 @@ import {
   getCompletedByTech,
 } from "./jobs.js";
 import { readSheet, readCalendarEvents } from "./google.js";
+import { NAME_OVERRIDES } from "./name-overrides.js";
 
 // ---------------------------------------------------------------------------
 // Date helpers
@@ -67,6 +68,17 @@ async function safe(label, fn) {
 }
 
 // ---------------------------------------------------------------------------
+// Tech display name resolver — applies NAME_OVERRIDES then takes first name
+// ---------------------------------------------------------------------------
+
+function techDisplayName(fullName) {
+  if (!fullName) return "";
+  const override = NAME_OVERRIDES[fullName];
+  if (override) return override;
+  return fullName.split(/\s+/)[0];
+}
+
+// ---------------------------------------------------------------------------
 // Job categorization for the totals strip
 // ---------------------------------------------------------------------------
 
@@ -81,7 +93,6 @@ function categorizeJob(job) {
   const tags = (job.tags || []).map(t => typeof t === "string" ? t : (t.name || ""));
   const hasTag = (set) => tags.some(t => set.has(t));
 
-  // Job type takes precedence if it's an estimate
   const jobType = (job.jobType || "").toLowerCase();
   if (jobType.includes("estimate")) return "estimate";
 
@@ -107,7 +118,6 @@ async function buildJobBoard(thisMon, nextMon) {
     total: jobs.length,
   };
 
-  // Totals strip — categorize all jobs on the board
   const breakdown = { service: 0, install: 0, estimate: 0, other: 0 };
   for (const j of jobs) {
     const cat = categorizeJob(j);
@@ -146,8 +156,6 @@ async function buildKPIs(lastMon, thisMon) {
   };
 }
 
-// Builds a single on-call entry from a sheet row.
-// Returns null if the row is missing or the tech can't be found.
 function buildOnCallEntry(row, roster) {
   if (!row) return null;
   const tech = roster.find(e => e.id === row.primary_employee_id);
@@ -172,13 +180,11 @@ async function buildOnCall(sheetId, roster, thisMon, nextMon) {
   const today = isoDateOnly(new Date());
   const nextMonISO = isoDateOnly(nextMon);
 
-  // Current week: most recent row with week_start_date <= today
   const past = rows
     .filter(r => r.week_start_date && r.week_start_date <= today)
     .sort((a, b) => b.week_start_date.localeCompare(a.week_start_date));
   const currentRow = past[0] || null;
 
-  // Next week: row whose week_start_date matches next Monday exactly
   const nextRow = rows.find(r => r.week_start_date === nextMonISO) || null;
 
   return {
@@ -247,20 +253,6 @@ async function buildNewItems(sheetId) {
     }));
 }
 
-async function buildMovedItems(sheetId) {
-  const rows = await readSheet(sheetId, "moved_items");
-  return rows
-    .filter(r => r.name)
-    .sort((a, b) => (b.moved_date || "").localeCompare(a.moved_date || ""))
-    .slice(0, 3)
-    .map(r => ({
-      name: r.name,
-      oldLocation: r.old_location || "",
-      newLocation: r.new_location || "",
-      movedDate: r.moved_date || "",
-    }));
-}
-
 async function buildSafetyTopic(sheetId, thisMon) {
   const rows = await readSheet(sheetId, "safety_topic");
   if (rows.length === 0) return null;
@@ -309,6 +301,100 @@ async function buildShoutout(sheetId, roster) {
 }
 
 // ---------------------------------------------------------------------------
+// Google Reviews — pulls featured 5-star reviews from sheet
+// ---------------------------------------------------------------------------
+
+function isTruthy(val) {
+  if (val === true) return true;
+  if (typeof val === "string") {
+    const v = val.trim().toLowerCase();
+    return v === "true" || v === "yes" || v === "1" || v === "y";
+  }
+  return false;
+}
+
+async function buildGoogleReviews(sheetId, roster) {
+  const rows = await readSheet(sheetId, "google_reviews");
+  if (rows.length === 0) return [];
+
+  // Filter to featured rows only, sort by review_date desc
+  const featured = rows
+    .filter(r => isTruthy(r.featured) && r.review_text)
+    .sort((a, b) => (b.review_date || "").localeCompare(a.review_date || ""));
+
+  if (featured.length === 0) return [];
+
+  // Map each row to a review object with tech name lookup
+  const mapped = featured.map(r => {
+    let techDisplay = "";
+    if (r.tech_employee_id) {
+      const tech = roster.find(e => e.id === r.tech_employee_id);
+      if (tech) {
+        techDisplay = techDisplayName(tech.fullName);
+      }
+    }
+    return {
+      reviewDate: r.review_date || "",
+      customerName: r.customer_name || "Customer",
+      stars: parseInt(r.star_rating, 10) || 5,
+      techDisplay,
+      text: r.review_text || "",
+      location: r.location || "",
+    };
+  });
+
+  // Pick exactly 3 to display, repeating the most recent if fewer
+  const result = [];
+  for (let i = 0; i < 3; i++) {
+    if (i < mapped.length) {
+      result.push(mapped[i]);
+    } else {
+      result.push(mapped[0]); // repeat most recent
+    }
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Service Areas — counts completed jobs by city, last 30 days
+// ---------------------------------------------------------------------------
+
+async function buildServiceAreas(thisMon, daysBack = 30) {
+  const startDate = addDays(thisMon, -daysBack);
+  const completed = await getCompletedJobsInRange({
+    startISO: startDate.toISOString(),
+    endISO: thisMon.toISOString(),
+  });
+
+  // Aggregate by city
+  const cityCounts = new Map();
+  for (const job of completed) {
+    const addr = job.address || {};
+    const city = (addr.city || "").trim();
+    if (!city) continue;
+
+    // Normalize to title case for consistent display
+    const normalized = city.split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+
+    cityCounts.set(normalized, (cityCounts.get(normalized) || 0) + 1);
+  }
+
+  // Convert to sorted array, top 7
+  const sorted = [...cityCounts.entries()]
+    .map(([city, count]) => ({ city, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 7);
+
+  return {
+    daysBack,
+    totalJobs: completed.length,
+    cities: sorted,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Main entry point
 // ---------------------------------------------------------------------------
 
@@ -327,18 +413,20 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
 
   const [
     jobBoardR, kpisR, onCallR, eventsR,
-    newItemsR, movedItemsR, safetyR, shoutoutR, tagDurationsR, hygieneR,
+    newItemsR, safetyR, shoutoutR, tagDurationsR, hygieneR,
+    googleReviewsR, serviceAreasR,
   ] = await Promise.all([
     safe("job board", () => buildJobBoard(thisMon, nextMon)),
     safe("KPIs", () => buildKPIs(lastMon, thisMon)),
     safe("on-call", () => buildOnCall(sheetId, roster, thisMon, nextMon)),
     safe("events", () => buildEvents(sheetId, calendarId, thisMon)),
     safe("new items", () => buildNewItems(sheetId)),
-    safe("moved items", () => buildMovedItems(sheetId)),
     safe("safety topic", () => buildSafetyTopic(sheetId, thisMon)),
     safe("shoutout", () => buildShoutout(sheetId, roster)),
     safe("tag durations", () => getTagDurations({ daysBack: 30, topN: 8 })),
     safe("hygiene", () => getHygieneStats()),
+    safe("google reviews", () => buildGoogleReviews(sheetId, roster)),
+    safe("service areas", () => buildServiceAreas(thisMon, 30)),
   ]);
 
   return {
@@ -346,20 +434,22 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
       mondayISO: isoDateOnly(thisMon),
       humanLabel: fmtFullDateET(thisMon),
     },
-    jobBoard:     jobBoardR.ok ? jobBoardR.data : null,
-    kpis:         kpisR.ok ? kpisR.data : null,
-    onCall:       onCallR.ok ? onCallR.data : { current: null, next: null },
-    events:       eventsR.ok ? eventsR.data : [],
-    newItems:     newItemsR.ok ? newItemsR.data : [],
-    movedItems:   movedItemsR.ok ? movedItemsR.data : [],
-    safetyTopic:  safetyR.ok ? safetyR.data : null,
-    shoutout:     shoutoutR.ok ? shoutoutR.data : null,
-    tagDurations: tagDurationsR.ok ? tagDurationsR.data : [],
-    hygiene:      hygieneR.ok ? hygieneR.data : null,
+    jobBoard:      jobBoardR.ok ? jobBoardR.data : null,
+    kpis:          kpisR.ok ? kpisR.data : null,
+    onCall:        onCallR.ok ? onCallR.data : { current: null, next: null },
+    events:        eventsR.ok ? eventsR.data : [],
+    newItems:      newItemsR.ok ? newItemsR.data : [],
+    safetyTopic:   safetyR.ok ? safetyR.data : null,
+    shoutout:      shoutoutR.ok ? shoutoutR.data : null,
+    tagDurations:  tagDurationsR.ok ? tagDurationsR.data : [],
+    hygiene:       hygieneR.ok ? hygieneR.data : null,
+    googleReviews: googleReviewsR.ok ? googleReviewsR.data : [],
+    serviceAreas:  serviceAreasR.ok ? serviceAreasR.data : null,
     rosterCount: roster.length,
     errors: [
       jobBoardR, kpisR, onCallR, eventsR,
-      newItemsR, movedItemsR, safetyR, shoutoutR, tagDurationsR, hygieneR,
+      newItemsR, safetyR, shoutoutR, tagDurationsR, hygieneR,
+      googleReviewsR, serviceAreasR,
     ].filter(r => !r.ok).map(r => r.error),
   };
 }
