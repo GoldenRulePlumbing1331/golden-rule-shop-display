@@ -912,23 +912,24 @@ function buildCSS() {
       height: 3.5%;
       flex-shrink: 0;
       background: ${COLORS.STEEL_LIGHT};
-      font-size: 0.7vw;
+      font-size: 0.75vw;
       color: ${COLORS.GRAY_TEXT};
       font-weight: bold;
       letter-spacing: 0.14em;
-    }
-    .tt-row.subhead .tt-cell {
       border-top: 1px solid ${COLORS.GRAY_LINE};
       border-bottom: 1px solid ${COLORS.GRAY_LINE};
+    }
+    .tt-row.subhead > div {
       display: flex;
       align-items: center;
       justify-content: center;
+      height: 100%;
     }
     .tt-row.subhead .tt-subblock {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      border-top: 1px solid ${COLORS.GRAY_LINE};
-      border-bottom: 1px solid ${COLORS.GRAY_LINE};
+      align-items: stretch;
+      height: 100%;
     }
     .tt-row.subhead .tt-subcell {
       display: flex;
@@ -1631,7 +1632,7 @@ function buildTimeTrackingSlideHTML({ hygiene }, slideLabel) {
           <div class="tt-cell"></div>
         </div>
         <div class="tt-row subhead">
-          <div class="tt-cell"></div>
+          <div></div>
           <div class="tt-subblock">
             <div class="tt-subcell">OMW</div>
             <div class="tt-subcell">START</div>
@@ -1642,8 +1643,8 @@ function buildTimeTrackingSlideHTML({ hygiene }, slideLabel) {
             <div class="tt-subcell">START</div>
             <div class="tt-subcell">FINISH</div>
           </div>
-          <div class="tt-cell"></div>
-          <div class="tt-cell"></div>
+          <div></div>
+          <div></div>
         </div>
         ${bodyRows}
       </div>
