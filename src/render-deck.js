@@ -449,7 +449,6 @@ function buildNewItemsSlide(s, pres, icons, { newItems }, slideLabel) {
   addFooter(s, pres, slideLabel);
 }
 
-// NEW: Google Reviews slide — replaces Moved & Rearranged
 function buildGoogleReviewsSlide(s, pres, icons, { googleReviews }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "5-STAR REVIEWS — WHAT CUSTOMERS ARE SAYING", icons.starHeader);
@@ -468,7 +467,6 @@ function buildGoogleReviewsSlide(s, pres, icons, { googleReviews }, slideLabel) 
     return;
   }
 
-  // Three stacked review cards
   const cardX = 0.5, cardW = 12.333;
   const cardH = 1.85, cardGap = 0.15;
   const startY = 1.1;
@@ -477,20 +475,16 @@ function buildGoogleReviewsSlide(s, pres, icons, { googleReviews }, slideLabel) 
     const r = reviews[i];
     const y = startY + i * (cardH + cardGap);
 
-    // Card background
     s.addShape("rect", {
       x: cardX, y, w: cardW, h: cardH,
       fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
       shadow: { type: "outer", color: "000000", blur: 8, offset: 2, angle: 90, opacity: 0.08 }
     });
-    // Yellow left accent
     s.addShape("rect", { x: cardX, y, w: 0.14, h: cardH,
       fill: { color: YELLOW }, line: { color: YELLOW } });
 
-    // Quote icon (top left)
     s.addImage({ data: icons.quoteNavy, x: cardX + 0.4, y: y + 0.25, w: 0.5, h: 0.5 });
 
-    // Stars (top right)
     const starSize = 0.32, starGap = 0.05;
     const starsW = 5 * starSize + 4 * starGap;
     const starsX = cardX + cardW - starsW - 0.4;
@@ -499,14 +493,12 @@ function buildGoogleReviewsSlide(s, pres, icons, { googleReviews }, slideLabel) 
         x: starsX + j * (starSize + starGap), y: y + 0.3, w: starSize, h: starSize });
     }
 
-    // Review text (main content)
     s.addText(`"${r.text}"`, {
       x: cardX + 1.05, y: y + 0.2, w: cardW - 1.5, h: 1.0,
       fontFace: "Arial", fontSize: 13, color: NAVY_DARK, italic: true,
       valign: "top", margin: 0
     });
 
-    // Customer name + location (bottom)
     const customerLine = r.location ? `— ${r.customerName}, ${r.location}` : `— ${r.customerName}`;
     s.addText(customerLine, {
       x: cardX + 1.05, y: y + cardH - 0.55, w: cardW * 0.6, h: 0.35,
@@ -514,7 +506,6 @@ function buildGoogleReviewsSlide(s, pres, icons, { googleReviews }, slideLabel) 
       valign: "middle", margin: 0
     });
 
-    // Tech callout (bottom right) if applicable
     if (r.techDisplay) {
       s.addText(`👏  PRAISED: ${r.techDisplay.toUpperCase()}`, {
         x: cardX + cardW - 3.5, y: y + cardH - 0.55, w: 3.3, h: 0.35,
@@ -524,7 +515,6 @@ function buildGoogleReviewsSlide(s, pres, icons, { googleReviews }, slideLabel) 
     }
   }
 
-  // Bottom banner
   s.addShape("rect", { x: 0.5, y: 6.55, w: 12.333, h: 0.5,
     fill: { color: YELLOW }, line: { color: YELLOW } });
   s.addText("THIS IS WHAT 5-STAR WORK LOOKS LIKE  —  KEEP IT UP", {
@@ -743,11 +733,12 @@ function buildTagDurationsSlide(s, pres, icons, { tagDurations }, slideLabel) {
   addFooter(s, pres, slideLabel);
 }
 
+// Time Tracking — now with LED + ASSIGNED columns reading from 7-day data
 function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "TIME TRACKING — HCP BUTTONS", icons.bell);
 
-  s.addText("ON MY WAY  /  START  /  FINISH  —  COMPLIANCE BY TECH", {
+  s.addText("ON MY WAY  /  START  /  FINISH  —  COMPLIANCE BY TECH  ·  LAST 7 DAYS", {
     x: 0.5, y: 1.05, w: 12.3, h: 0.45,
     fontFace: "Arial", fontSize: 13, color: GRAY_MUTED, bold: true,
     valign: "middle", margin: 0, charSpacing: 2
@@ -763,6 +754,7 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
     return;
   }
 
+  // Merge last7 + last30 into per-tech rows
   const techMap = new Map();
   for (const r of hygiene.last30) techMap.set(r.employeeId, { d30: r, d7: null });
   for (const r of hygiene.last7) {
@@ -779,17 +771,20 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
     return bPct - aPct;
   });
 
+  // Column geometry — adjusted for new ASSIGNED column
   const tableX = 0.5, tableW = 12.333;
   const tableY = 1.5;
   const headerH = 0.4;
   const rowH = 0.36;
   const visibleRows = Math.min(allRows.length, 11);
 
-  const colTech = 2.4;
-  const col30Block = 4.4;
-  const col7Block = 4.4;
-  const colJobs = 1.0;
+  const colTech = 2.2;
+  const col30Block = 4.2;
+  const col7Block = 4.2;
+  const colLed = 0.85;
+  const colAssigned = 0.883;
 
+  // Header row
   s.addShape("rect", {
     x: tableX, y: tableY, w: tableW, h: headerH,
     fill: { color: NAVY_DARK }, line: { color: NAVY_DARK }
@@ -823,13 +818,21 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
     align: "center", valign: "middle", margin: 0, charSpacing: 3
   });
 
-  const xJobs = x7 + col7Block;
-  s.addText("# JOBS", {
-    x: xJobs, y: tableY, w: colJobs, h: headerH,
+  const xLed = x7 + col7Block;
+  s.addText("LED", {
+    x: xLed, y: tableY, w: colLed, h: headerH,
     fontFace: "Arial Black", fontSize: 11, color: YELLOW, bold: true,
     align: "center", valign: "middle", margin: 0, charSpacing: 2
   });
 
+  const xAssigned = xLed + colLed;
+  s.addText("ASSIGNED", {
+    x: xAssigned, y: tableY, w: colAssigned, h: headerH,
+    fontFace: "Arial Black", fontSize: 11, color: YELLOW, bold: true,
+    align: "center", valign: "middle", margin: 0, charSpacing: 2
+  });
+
+  // Sub-header row
   const subY = tableY + headerH;
   const subH = 0.26;
   s.addShape("rect", {
@@ -838,10 +841,10 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
   });
   const subFor = (xStart, blockW) => {
     const labels = ["OMW", "START", "FINISH"];
-    const colW = blockW / 3;
+    const cw = blockW / 3;
     for (let i = 0; i < 3; i++) {
       s.addText(labels[i], {
-        x: xStart + i * colW, y: subY, w: colW, h: subH,
+        x: xStart + i * cw, y: subY, w: cw, h: subH,
         fontFace: "Arial", fontSize: 9, color: GRAY_TEXT, bold: true,
         align: "center", valign: "middle", margin: 0, charSpacing: 2
       });
@@ -850,6 +853,19 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
   subFor(x30, col30Block);
   subFor(x7, col7Block);
 
+  // Sub-labels for LED / ASSIGNED columns
+  s.addText("(7 DAYS)", {
+    x: xLed, y: subY, w: colLed, h: subH,
+    fontFace: "Arial", fontSize: 8, color: GRAY_TEXT, bold: true,
+    align: "center", valign: "middle", margin: 0, charSpacing: 1
+  });
+  s.addText("(7 DAYS)", {
+    x: xAssigned, y: subY, w: colAssigned, h: subH,
+    fontFace: "Arial", fontSize: 8, color: GRAY_TEXT, bold: true,
+    align: "center", valign: "middle", margin: 0, charSpacing: 1
+  });
+
+  // Cell color helpers
   const cellColor = (pct) => {
     if (pct === null) return STEEL_LIGHT;
     if (pct >= 95) return "C8E6C9";
@@ -863,6 +879,7 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
   };
   const fmtPct = (pct) => pct === null ? "—" : `${pct}%`;
 
+  // Body rows
   const bodyY = subY + subH;
   for (let i = 0; i < visibleRows; i++) {
     const row = allRows[i];
@@ -888,17 +905,17 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
     });
 
     const drawTriple = (xStart, blockW, stats) => {
-      const cellW = blockW / 3;
+      const cw = blockW / 3;
       const pcts = stats ? [stats.omwPct, stats.startPct, stats.finishPct] : [null, null, null];
       for (let j = 0; j < 3; j++) {
-        const cx = xStart + j * cellW;
+        const cx = xStart + j * cw;
         const cellPad = 0.05;
         s.addShape("rect", {
-          x: cx + cellPad, y: y + cellPad, w: cellW - cellPad * 2, h: rowH - cellPad * 2,
+          x: cx + cellPad, y: y + cellPad, w: cw - cellPad * 2, h: rowH - cellPad * 2,
           fill: { color: cellColor(pcts[j]) }, line: { color: cellColor(pcts[j]) }
         });
         s.addText(fmtPct(pcts[j]), {
-          x: cx, y, w: cellW, h: rowH,
+          x: cx, y, w: cw, h: rowH,
           fontFace: "Arial Black", fontSize: 12, color: cellTextColor(pcts[j]), bold: true,
           align: "center", valign: "middle", margin: 0
         });
@@ -907,13 +924,22 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
     drawTriple(x30, col30Block, row.d30);
     drawTriple(x7, col7Block, row.d7);
 
-    s.addText(String(row.d30?.totalJobs ?? "—"), {
-      x: xJobs, y, w: colJobs, h: rowH,
-      fontFace: "Arial", fontSize: 12, color: GRAY_TEXT, bold: true,
+    // LED column — read from 7-day data
+    s.addText(String(row.d7?.totalJobs ?? "—"), {
+      x: xLed, y, w: colLed, h: rowH,
+      fontFace: "Arial Black", fontSize: 12, color: NAVY_DARK, bold: true,
+      align: "center", valign: "middle", margin: 0
+    });
+
+    // ASSIGNED column — read from 7-day data
+    s.addText(String(row.d7?.totalAssigned ?? "—"), {
+      x: xAssigned, y, w: colAssigned, h: rowH,
+      fontFace: "Arial Black", fontSize: 12, color: STEEL, bold: true,
       align: "center", valign: "middle", margin: 0
     });
   }
 
+  // Leader callout
   const leader = hygiene.leader;
   const flagged = hygiene.flagged || [];
 
@@ -1059,7 +1085,6 @@ function buildShoutoutSlide(s, pres, icons, { shoutout }, slideLabel) {
   addFooter(s, pres, slideLabel);
 }
 
-// NEW: Service Areas slide — top cities by job count, last 30 days
 function buildServiceAreasSlide(s, pres, icons, { serviceAreas }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "SERVICE AREAS — WHERE THE WORK IS", icons.mapMarked);
@@ -1083,10 +1108,7 @@ function buildServiceAreasSlide(s, pres, icons, { serviceAreas }, slideLabel) {
     return;
   }
 
-  // Find max for bar scaling
   const maxCount = cities[0]?.count || 1;
-
-  // Render top 7 cities as horizontal bars
   const startY = 1.7;
   const rowH = 0.62;
   const rowGap = 0.08;
@@ -1096,14 +1118,12 @@ function buildServiceAreasSlide(s, pres, icons, { serviceAreas }, slideLabel) {
     const c = cities[i];
     const y = startY + i * (rowH + rowGap);
 
-    // Card background
     s.addShape("rect", {
       x: 0.5, y, w: 12.333, h: rowH,
       fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
       shadow: { type: "outer", color: "000000", blur: 4, offset: 1, angle: 90, opacity: 0.05 }
     });
 
-    // Rank pill (left side)
     const rank = i + 1;
     const isLeader = i === 0;
     s.addShape("rect", { x: 0.5, y, w: 0.7, h: rowH,
@@ -1116,30 +1136,25 @@ function buildServiceAreasSlide(s, pres, icons, { serviceAreas }, slideLabel) {
       align: "center", valign: "middle", margin: 0
     });
 
-    // City name
     s.addText(c.city.toUpperCase(), {
       x: 1.4, y, w: 4.0, h: rowH,
       fontFace: "Arial Black", fontSize: 18, color: NAVY_DARK, bold: true,
       valign: "middle", margin: 0
     });
 
-    // Bar visualization
     const barX = 5.6, barMaxW = 5.5, barH = 0.4;
     const barY = y + (rowH - barH) / 2;
     const barW = (c.count / maxCount) * barMaxW;
 
-    // Bar background (light)
     s.addShape("rect", {
       x: barX, y: barY, w: barMaxW, h: barH,
       fill: { color: STEEL_LIGHT }, line: { color: GRAY_LINE, width: 1 }
     });
-    // Bar fill
     s.addShape("rect", {
       x: barX, y: barY, w: Math.max(barW, 0.15), h: barH,
       fill: { color: isLeader ? YELLOW : NAVY }, line: { color: isLeader ? YELLOW : NAVY }
     });
 
-    // Job count
     s.addText(`${c.count} JOBS`, {
       x: 11.4, y, w: 1.4, h: rowH,
       fontFace: "Arial Black", fontSize: 18, color: NAVY_DARK, bold: true,
@@ -1147,7 +1162,6 @@ function buildServiceAreasSlide(s, pres, icons, { serviceAreas }, slideLabel) {
     });
   }
 
-  // Bottom banner
   s.addShape("rect", { x: 0.5, y: 6.55, w: 12.333, h: 0.5,
     fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
   s.addText("KNOW YOUR TERRITORY  —  EVERY ZIP CODE IS AN OPPORTUNITY", {
@@ -1285,8 +1299,6 @@ export async function renderDeck(data, outputPath) {
     shield:         await iconPng(FaShieldAlt, "#FFFFFF", 320),
   };
 
-  // New slide order: cover, oncall, events, newitems, REVIEWS, jobboard,
-  // tagdurations, hygiene, safety?, shoutout?, SERVICE AREAS, kpis
   const plan = [];
   plan.push({ key: "cover",        label: "COVER" });
   plan.push({ key: "oncall",       label: "ON CALL" });
