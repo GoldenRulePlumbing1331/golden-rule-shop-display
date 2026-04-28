@@ -1,3 +1,4 @@
+import fs from "fs";
 import { buildData } from "../src/build-data.js";
 import { renderDeck } from "../src/render-deck.js";
 import { renderHTML } from "../src/render-html.js";
@@ -10,6 +11,10 @@ const SKIP_PUBLISH = process.env.SKIP_PUBLISH === "true";
 (async () => {
   if (!SHEET_ID) throw new Error("GOOGLE_SHEET_ID env var not set");
   if (!CALENDAR_ID) throw new Error("GOOGLE_CALENDAR_ID env var not set");
+
+  // Make sure the output directory exists (CI runners start fresh; the
+  // pptxgenjs writeFile call doesn't create parent dirs)
+  fs.mkdirSync("./output", { recursive: true });
 
   console.log("Fetching data...");
   const data = await buildData({ sheetId: SHEET_ID, calendarId: CALENDAR_ID });
@@ -40,7 +45,7 @@ const SKIP_PUBLISH = process.env.SKIP_PUBLISH === "true";
 
   console.log("\nPublishing to GitHub release 'current'...");
 
-  // Publish the .pptx (existing behavior)
+  // Publish the .pptx
   const pptxPub = await publishToCurrentRelease({
     filePath: pptxPath,
     displayName: pptxFilename,
@@ -49,14 +54,14 @@ const SKIP_PUBLISH = process.env.SKIP_PUBLISH === "true";
   console.log(`\n✓ .pptx download URL:`);
   console.log(`  ${pptxPub.downloadUrl}`);
 
-  // Publish the HTML (new — this is the shop TV bookmark)
+  // Publish the HTML (still useful as a backup, though Pages is the primary URL)
   const htmlPub = await publishToCurrentRelease({
     filePath: htmlPath,
     displayName: htmlFilename,
     weekHumanLabel: data.weekOf.humanLabel,
     contentType: "text/html",
   });
-  console.log(`\n✓ HTML download URL (shop TV bookmark):`);
+  console.log(`\n✓ HTML release URL (backup):`);
   console.log(`  ${htmlPub.downloadUrl}`);
 
   console.log(`\n  Release page: ${htmlPub.releaseUrl}`);
