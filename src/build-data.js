@@ -73,8 +73,17 @@ async function safe(label, fn) {
 
 function techDisplayName(fullName) {
   if (!fullName) return "";
-  const firstName = fullName.split(/\s+/)[0];
-  return overrideFirstName(firstName);
+  const parts = fullName.split(/\s+/);
+  // Try progressively shorter prefixes, longest first.
+  // For "R Kevin Donnelly": try "R Kevin Donnelly", then "R Kevin", then "R"
+  // The override map keys with multi-word names (like "R Kevin") will catch the right tokenization.
+  for (let i = parts.length; i >= 1; i--) {
+    const candidate = parts.slice(0, i).join(" ");
+    const overridden = overrideFirstName(candidate);
+    if (overridden !== candidate) return overridden; // Override matched
+  }
+  // No override matched — fall back to first token
+  return parts[0];
 }
 
 // ---------------------------------------------------------------------------
@@ -364,6 +373,13 @@ async function buildServiceAreas(thisMon, daysBack = 30) {
     startISO: startDate.toISOString(),
     endISO: thisMon.toISOString(),
   });
+
+  console.log(`[build-data] service areas: got ${completed.length} completed jobs`);
+  if (completed.length > 0) {
+    const sample = completed[0];
+    console.log(`[build-data] service areas: sample job keys:`, Object.keys(sample));
+    console.log(`[build-data] service areas: sample job.address:`, JSON.stringify(sample.address));
+  }
 
   // Aggregate by city
   const cityCounts = new Map();
