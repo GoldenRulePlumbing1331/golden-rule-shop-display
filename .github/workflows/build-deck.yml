@@ -2,9 +2,13 @@ name: Build deck
 
 on:
   schedule:
-    # 6 AM ET = 10 UTC (DST) / 11 UTC (standard time) — run both for coverage
-    - cron: '0 10 * * 1'
-    - cron: '0 11 * * 1'
+    # Mon-Fri at 6 AM ET. Two cron entries to handle DST:
+    # - 10:00 UTC = 6 AM ET during DST (March-November)
+    # - 11:00 UTC = 6 AM ET during EST (November-March)
+    # One of the two will fire at the right time year-round; the other
+    # runs an hour off and is harmless (it just rebuilds with the same data).
+    - cron: '0 10 * * 1-5'
+    - cron: '0 11 * * 1-5'
   workflow_dispatch:
 
 permissions:
@@ -12,7 +16,6 @@ permissions:
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -47,7 +50,6 @@ jobs:
         run: |
           mkdir -p pages-site
           cp output/GoldenRule_ShopBriefing_CURRENT.html pages-site/index.html
-          # Also copy a friendly named version that someone could bookmark
           cp output/GoldenRule_ShopBriefing_CURRENT.html pages-site/shop-briefing.html
 
       - name: Setup Pages
