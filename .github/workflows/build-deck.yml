@@ -1,47 +1,63 @@
 name: Build deck
 
 on:
-  workflow_dispatch:
   schedule:
-    # Every Monday 6 AM Eastern (covers both ET standard and DST)
-    - cron: "0 11 * * MON"
-    - cron: "0 10 * * MON"
+    # 6 AM ET = 10 UTC (DST) / 11 UTC (standard time) — run both for coverage
+    - cron: '0 10 * * 1'
+    - cron: '0 11 * * 1'
+  workflow_dispatch:
 
 permissions:
-  # Required to create releases and upload assets
   contents: write
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Check out repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Node
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
 
       - name: Install dependencies
         run: npm install
 
-      - name: Make output directory
-        run: mkdir -p output
-
-      - name: Build deck and publish release
+      - name: Build deck (HTML + PPTX)
         env:
           HCP_API_KEY: ${{ secrets.HCP_API_KEY }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_SHEET_ID: ${{ vars.GOOGLE_SHEET_ID }}
           GOOGLE_CALENDAR_ID: ${{ vars.GOOGLE_CALENDAR_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
         run: npm run build-deck
 
-      - name: Upload deck as workflow artifact (backup)
-        uses: actions/upload-artifact@v4
+      - name: Prepare Pages site directory
+        run: |
+          mkdir -p pages-site
+          cp output/GoldenRule_ShopBriefing_CURRENT.html pages-site/index.html
+          # Also copy a friendly named version that someone could bookmark
+          cp output/GoldenRule_ShopBriefing_CURRENT.html pages-site/shop-briefing.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: shop-briefing-pptx
-          path: output/*.pptx
-          retention-days: 30
+          path: pages-site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
