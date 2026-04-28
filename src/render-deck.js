@@ -5,10 +5,11 @@ import React from "react";
 import ReactDOMServer from "react-dom/server";
 import sharp from "sharp";
 import {
-  FaPhone, FaCalendarAlt, FaBoxOpen, FaExchangeAlt,
+  FaPhone, FaCalendarAlt, FaBoxOpen,
   FaExclamationTriangle, FaTrophy, FaClipboardList,
-  FaWrench, FaTruck, FaHardHat, FaBell, FaStar, FaArrowRight,
-  FaMapMarkerAlt, FaShieldAlt, FaFire, FaEnvelope,
+  FaWrench, FaTruck, FaHardHat, FaBell, FaStar,
+  FaMapMarkerAlt, FaShieldAlt, FaFire, FaEnvelope, FaQuoteLeft,
+  FaMapMarkedAlt,
 } from "react-icons/fa";
 
 // ---------- Brand palette ----------
@@ -24,7 +25,6 @@ const GRAY_TEXT   = "4A5A70";
 const GRAY_MUTED  = "7A8599";
 const GRAY_LINE   = "D1D8E2";
 
-// Slide auto-advance timing (seconds). Used by PowerPoint/Keynote.
 const SLIDE_ADVANCE_SECONDS = 15;
 
 // ---------- Logo ----------
@@ -181,7 +181,6 @@ function buildCoverSlide(s, _pres, _icons, { weekHumanLabel, onCall }) {
     valign: "middle", margin: 0, charSpacing: 3
   });
 
-  // Bottom yellow bar — read from current week's on-call entry
   const dispatcher = onCall?.current?.dispatcher || "[ NOT SET ]";
   const materialRuns = onCall?.current?.materialRuns || "[ NOT SET ]";
   s.addText(
@@ -194,22 +193,18 @@ function buildCoverSlide(s, _pres, _icons, { weekHumanLabel, onCall }) {
   );
 }
 
-// On Call slide — split into THIS WEEK (left) and NEXT WEEK (right)
 async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "ON CALL", icons.phoneYellow);
 
-  // Helper to draw one card
   const drawCard = (cfg) => {
     const { x, w, label, dark, entry, accent } = cfg;
     s.addShape("rect", { x, y: 1.2, w, h: 5.6,
       fill: { color: dark ? NAVY_DARK : WHITE },
       line: { color: dark ? NAVY_DARK : GRAY_LINE, width: dark ? 0 : 1 }
     });
-    // Top accent stripe
     s.addShape("rect", { x, y: 1.2, w, h: 0.18,
       fill: { color: accent }, line: { color: accent } });
-    // Left accent bar (skip if not dark)
     if (dark) {
       s.addShape("rect", { x, y: 1.2, w: 0.14, h: 5.6,
         fill: { color: YELLOW }, line: { color: YELLOW } });
@@ -227,7 +222,6 @@ async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
     });
 
     if (!entry) {
-      // Placeholder for unfilled week
       s.addText("NOT YET SCHEDULED", {
         x: x + 0.35, y: 3.4, w: w - 0.7, h: 0.6,
         fontFace: "Arial Black", fontSize: 22, color: subColor, bold: true,
@@ -252,7 +246,6 @@ async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
       valign: "middle", margin: 0
     });
 
-    // Phone
     s.addImage({ data: dark ? icons.phoneYellowSm : icons.phoneNavy,
       x: x + 0.35, y: 3.45, w: 0.28, h: 0.28 });
     s.addText(formatPhone(entry.primaryMobile) || "(no number on file)", {
@@ -261,7 +254,6 @@ async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
       valign: "middle", margin: 0
     });
 
-    // Email
     s.addImage({ data: dark ? icons.envelopeYellow : icons.envelopeNavy,
       x: x + 0.35, y: 3.95, w: 0.28, h: 0.28 });
     s.addText(entry.primaryEmail || "(no email on file)", {
@@ -270,11 +262,9 @@ async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
       valign: "middle", margin: 0
     });
 
-    // Divider
     s.addShape("line", { x: x + 0.35, y: 4.65, w: w - 0.7, h: 0,
       line: { color: dividerColor, width: 1 } });
 
-    // Dispatch
     s.addText("DISPATCH / OFFICE", {
       x: x + 0.35, y: 4.8, w: w - 0.7, h: 0.3,
       fontFace: "Arial", fontSize: 11, color: labelColor, bold: true,
@@ -286,7 +276,6 @@ async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
       valign: "middle", margin: 0
     });
 
-    // Material runs
     s.addText("MATERIAL RUNS", {
       x: x + 0.35, y: 5.7, w: w - 0.7, h: 0.3,
       fontFace: "Arial", fontSize: 11, color: labelColor, bold: true,
@@ -299,22 +288,13 @@ async function buildOnCallSlide(s, pres, icons, { onCall }, slideLabel) {
     });
   };
 
-  // Left card: THIS WEEK
   drawCard({
-    x: 0.5, w: 6.0,
-    label: "THIS WEEK",
-    dark: true,
-    entry: onCall?.current,
-    accent: YELLOW,
+    x: 0.5, w: 6.0, label: "THIS WEEK", dark: true,
+    entry: onCall?.current, accent: YELLOW,
   });
-
-  // Right card: NEXT WEEK
   drawCard({
-    x: 6.85, w: 6.0,
-    label: "NEXT WEEK  —  HEADS UP",
-    dark: false,
-    entry: onCall?.next,
-    accent: NAVY_DARK,
+    x: 6.85, w: 6.0, label: "NEXT WEEK  —  HEADS UP", dark: false,
+    entry: onCall?.next, accent: NAVY_DARK,
   });
 
   addFooter(s, pres, slideLabel);
@@ -469,76 +449,93 @@ function buildNewItemsSlide(s, pres, icons, { newItems }, slideLabel) {
   addFooter(s, pres, slideLabel);
 }
 
-function buildMovedItemsSlide(s, pres, icons, { movedItems }, slideLabel) {
+// NEW: Google Reviews slide — replaces Moved & Rearranged
+function buildGoogleReviewsSlide(s, pres, icons, { googleReviews }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
-  addHeaderBar(s, pres, "MOVED & REARRANGED", icons.exchange);
-  s.addText("IF YOU CAN'T FIND SOMETHING — CHECK HERE FIRST", {
-    x: 0.5, y: 1.05, w: 12.3, h: 0.45,
-    fontFace: "Arial", fontSize: 13, color: GRAY_MUTED, bold: true,
-    valign: "middle", margin: 0, charSpacing: 2
-  });
+  addHeaderBar(s, pres, "5-STAR REVIEWS — WHAT CUSTOMERS ARE SAYING", icons.starHeader);
 
-  const rows = [...movedItems];
-  while (rows.length < 3) rows.push(null);
+  const reviews = googleReviews && googleReviews.length > 0
+    ? googleReviews.slice(0, 3)
+    : [];
 
-  const rowH = 1.55;
-  const startY = 1.7;
-  for (let i = 0; i < 3; i++) {
-    const m = rows[i];
-    const y = startY + i * (rowH + 0.15);
-    s.addShape("rect", {
-      x: 0.5, y, w: 12.333, h: rowH,
-      fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
-      shadow: { type: "outer", color: "000000", blur: 6, offset: 2, angle: 90, opacity: 0.06 }
+  if (reviews.length === 0) {
+    s.addText("(no featured reviews — add to the google_reviews sheet)", {
+      x: 0.5, y: 3.5, w: 12.333, h: 0.6,
+      fontFace: "Arial", fontSize: 18, color: GRAY_MUTED, italic: true,
+      align: "center", valign: "middle", margin: 0
     });
-    s.addShape("rect", { x: 0.5, y, w: 0.14, h: rowH, fill: { color: YELLOW }, line: { color: YELLOW } });
-
-    s.addText(m ? m.name.toUpperCase() : "(no moved item)", {
-      x: 0.85, y: y + 0.1, w: 3.5, h: rowH - 0.2,
-      fontFace: "Arial Black", fontSize: 18, color: NAVY_DARK, bold: true,
-      valign: "middle", margin: 0
-    });
-
-    s.addShape("rect", { x: 4.5, y: y + 0.25, w: 3.3, h: rowH - 0.5,
-      fill: { color: STEEL_LIGHT }, line: { color: GRAY_LINE, width: 1 } });
-    s.addText("OLD LOCATION", {
-      x: 4.6, y: y + 0.35, w: 3.1, h: 0.3,
-      fontFace: "Arial", fontSize: 10, color: GRAY_MUTED, bold: true,
-      valign: "middle", margin: 0, charSpacing: 2
-    });
-    s.addText(m ? m.oldLocation : "—", {
-      x: 4.6, y: y + 0.65, w: 3.1, h: 0.5,
-      fontFace: "Arial", fontSize: 15, color: GRAY_TEXT, bold: true,
-      valign: "middle", margin: 0
-    });
-
-    s.addImage({ data: icons.arrowYellow, x: 7.95, y: y + 0.55, w: 0.5, h: 0.5 });
-
-    s.addShape("rect", { x: 8.6, y: y + 0.25, w: 4.1, h: rowH - 0.5,
-      fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
-    s.addText("NEW LOCATION", {
-      x: 8.7, y: y + 0.35, w: 3.9, h: 0.3,
-      fontFace: "Arial", fontSize: 10, color: YELLOW, bold: true,
-      valign: "middle", margin: 0, charSpacing: 2
-    });
-    s.addText(m ? m.newLocation : "—", {
-      x: 8.7, y: y + 0.65, w: 3.9, h: 0.5,
-      fontFace: "Arial", fontSize: 15, color: WHITE, bold: true,
-      valign: "middle", margin: 0
-    });
+    addFooter(s, pres, slideLabel);
+    return;
   }
 
-  s.addShape("rect", { x: 0.5, y: 6.55, w: 12.333, h: 0.5, fill: { color: YELLOW }, line: { color: YELLOW } });
-  s.addText("UPDATE HCP INVENTORY LOCATIONS WHEN ITEMS MOVE", {
+  // Three stacked review cards
+  const cardX = 0.5, cardW = 12.333;
+  const cardH = 1.85, cardGap = 0.15;
+  const startY = 1.1;
+
+  for (let i = 0; i < 3; i++) {
+    const r = reviews[i];
+    const y = startY + i * (cardH + cardGap);
+
+    // Card background
+    s.addShape("rect", {
+      x: cardX, y, w: cardW, h: cardH,
+      fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
+      shadow: { type: "outer", color: "000000", blur: 8, offset: 2, angle: 90, opacity: 0.08 }
+    });
+    // Yellow left accent
+    s.addShape("rect", { x: cardX, y, w: 0.14, h: cardH,
+      fill: { color: YELLOW }, line: { color: YELLOW } });
+
+    // Quote icon (top left)
+    s.addImage({ data: icons.quoteNavy, x: cardX + 0.4, y: y + 0.25, w: 0.5, h: 0.5 });
+
+    // Stars (top right)
+    const starSize = 0.32, starGap = 0.05;
+    const starsW = 5 * starSize + 4 * starGap;
+    const starsX = cardX + cardW - starsW - 0.4;
+    for (let j = 0; j < 5; j++) {
+      s.addImage({ data: j < r.stars ? icons.starYellow : icons.starGray,
+        x: starsX + j * (starSize + starGap), y: y + 0.3, w: starSize, h: starSize });
+    }
+
+    // Review text (main content)
+    s.addText(`"${r.text}"`, {
+      x: cardX + 1.05, y: y + 0.2, w: cardW - 1.5, h: 1.0,
+      fontFace: "Arial", fontSize: 13, color: NAVY_DARK, italic: true,
+      valign: "top", margin: 0
+    });
+
+    // Customer name + location (bottom)
+    const customerLine = r.location ? `— ${r.customerName}, ${r.location}` : `— ${r.customerName}`;
+    s.addText(customerLine, {
+      x: cardX + 1.05, y: y + cardH - 0.55, w: cardW * 0.6, h: 0.35,
+      fontFace: "Arial Black", fontSize: 12, color: GRAY_TEXT, bold: true,
+      valign: "middle", margin: 0
+    });
+
+    // Tech callout (bottom right) if applicable
+    if (r.techDisplay) {
+      s.addText(`👏  PRAISED: ${r.techDisplay.toUpperCase()}`, {
+        x: cardX + cardW - 3.5, y: y + cardH - 0.55, w: 3.3, h: 0.35,
+        fontFace: "Arial Black", fontSize: 11, color: GREEN_OK, bold: true,
+        align: "right", valign: "middle", margin: 0, charSpacing: 2
+      });
+    }
+  }
+
+  // Bottom banner
+  s.addShape("rect", { x: 0.5, y: 6.55, w: 12.333, h: 0.5,
+    fill: { color: YELLOW }, line: { color: YELLOW } });
+  s.addText("THIS IS WHAT 5-STAR WORK LOOKS LIKE  —  KEEP IT UP", {
     x: 0.5, y: 6.55, w: 12.333, h: 0.5,
-    fontFace: "Arial Black", fontSize: 14, color: NAVY_DARK, bold: true,
+    fontFace: "Arial Black", fontSize: 13, color: NAVY_DARK, bold: true,
     align: "center", valign: "middle", margin: 0, charSpacing: 3
   });
 
   addFooter(s, pres, slideLabel);
 }
 
-// Job Board — stretched rows + totals strip
 function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "THIS WEEK'S JOB BOARD", icons.clipboard);
@@ -546,7 +543,6 @@ function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
   const leftX = 0.5, leftW = 8.3;
   const rightX = 9.0, rightW = 3.83;
 
-  // Left panel
   s.addShape("rect", { x: leftX, y: 1.15, w: leftW, h: 5.85,
     fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
     shadow: { type: "outer", color: "000000", blur: 8, offset: 2, angle: 90, opacity: 0.08 } });
@@ -559,9 +555,9 @@ function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
 
   const days = ["MON", "TUE", "WED", "THU", "FRI"];
   const jobsAreaY = 2.0;
-  const jobsAreaH = 4.0;        // 5 rows fill 4 inches
-  const totalsStripY = 6.05;    // strip starts at 6.05
-  const totalsStripH = 0.85;    // strip is ~0.85 inches tall
+  const jobsAreaH = 4.0;
+  const totalsStripY = 6.05;
+  const totalsStripH = 0.85;
   const jobRowH = jobsAreaH / 5;
 
   for (let i = 0; i < days.length; i++) {
@@ -576,7 +572,6 @@ function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
       });
     }
 
-    // Day pill
     s.addShape("rect", { x: leftX + 0.4, y: y + jobRowH/2 - 0.25, w: 0.8, h: 0.5,
       fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
     s.addText(day, {
@@ -585,7 +580,6 @@ function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
       align: "center", valign: "middle", margin: 0, charSpacing: 2
     });
 
-    // Description block
     s.addText(j ? "TOP JOB" : "", {
       x: leftX + 1.35, y: y + 0.1, w: 4.2, h: 0.3,
       fontFace: "Arial", fontSize: 10, color: GRAY_MUTED, bold: true,
@@ -597,13 +591,11 @@ function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
       valign: "middle", margin: 0
     });
 
-    // Tech
     s.addText(j ? j.techDisplay : "", {
       x: leftX + 5.7, y: y + jobRowH/2 - 0.2, w: 1.6, h: 0.4,
       fontFace: "Arial", fontSize: 13, color: GRAY_TEXT, bold: true,
       align: "center", valign: "middle", margin: 0
     });
-    // Duration
     s.addText(j ? j.durationLabel : "", {
       x: leftX + 7.35, y: y + jobRowH/2 - 0.2, w: 0.85, h: 0.4,
       fontFace: "Arial", fontSize: 14, color: NAVY_DARK, bold: true,
@@ -611,7 +603,6 @@ function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
     });
   }
 
-  // Totals strip at bottom of left panel
   const breakdown = jobBoard?.breakdown || { service: 0, install: 0, estimate: 0, other: 0 };
   s.addShape("rect", {
     x: leftX + 0.3, y: totalsStripY, w: leftW - 0.6, h: totalsStripH,
@@ -646,7 +637,6 @@ function buildJobBoardSlide(s, pres, icons, { jobBoard }, slideLabel) {
     }
   }
 
-  // Right side stat cards
   const statCard = (x, y, label, value, accent = YELLOW) => {
     s.addShape("rect", { x, y, w: rightW, h: 1.8,
       fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
@@ -1069,6 +1059,106 @@ function buildShoutoutSlide(s, pres, icons, { shoutout }, slideLabel) {
   addFooter(s, pres, slideLabel);
 }
 
+// NEW: Service Areas slide — top cities by job count, last 30 days
+function buildServiceAreasSlide(s, pres, icons, { serviceAreas }, slideLabel) {
+  s.background = { color: STEEL_LIGHT };
+  addHeaderBar(s, pres, "SERVICE AREAS — WHERE THE WORK IS", icons.mapMarked);
+
+  const days = serviceAreas?.daysBack || 30;
+  const total = serviceAreas?.totalJobs || 0;
+  s.addText(`COMPLETED JOBS BY CITY — LAST ${days} DAYS  ·  ${total} TOTAL JOBS`, {
+    x: 0.5, y: 1.05, w: 12.3, h: 0.45,
+    fontFace: "Arial", fontSize: 13, color: GRAY_MUTED, bold: true,
+    valign: "middle", margin: 0, charSpacing: 2
+  });
+
+  const cities = serviceAreas?.cities || [];
+  if (cities.length === 0) {
+    s.addText("(no completed job data available)", {
+      x: 0.5, y: 3.5, w: 12.333, h: 0.6,
+      fontFace: "Arial", fontSize: 18, color: GRAY_MUTED, italic: true,
+      align: "center", valign: "middle", margin: 0
+    });
+    addFooter(s, pres, slideLabel);
+    return;
+  }
+
+  // Find max for bar scaling
+  const maxCount = cities[0]?.count || 1;
+
+  // Render top 7 cities as horizontal bars
+  const startY = 1.7;
+  const rowH = 0.62;
+  const rowGap = 0.08;
+  const visibleRows = Math.min(cities.length, 7);
+
+  for (let i = 0; i < visibleRows; i++) {
+    const c = cities[i];
+    const y = startY + i * (rowH + rowGap);
+
+    // Card background
+    s.addShape("rect", {
+      x: 0.5, y, w: 12.333, h: rowH,
+      fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
+      shadow: { type: "outer", color: "000000", blur: 4, offset: 1, angle: 90, opacity: 0.05 }
+    });
+
+    // Rank pill (left side)
+    const rank = i + 1;
+    const isLeader = i === 0;
+    s.addShape("rect", { x: 0.5, y, w: 0.7, h: rowH,
+      fill: { color: isLeader ? YELLOW : NAVY_DARK },
+      line: { color: isLeader ? YELLOW : NAVY_DARK } });
+    s.addText(`#${rank}`, {
+      x: 0.5, y, w: 0.7, h: rowH,
+      fontFace: "Arial Black", fontSize: 18,
+      color: isLeader ? NAVY_DARK : YELLOW, bold: true,
+      align: "center", valign: "middle", margin: 0
+    });
+
+    // City name
+    s.addText(c.city.toUpperCase(), {
+      x: 1.4, y, w: 4.0, h: rowH,
+      fontFace: "Arial Black", fontSize: 18, color: NAVY_DARK, bold: true,
+      valign: "middle", margin: 0
+    });
+
+    // Bar visualization
+    const barX = 5.6, barMaxW = 5.5, barH = 0.4;
+    const barY = y + (rowH - barH) / 2;
+    const barW = (c.count / maxCount) * barMaxW;
+
+    // Bar background (light)
+    s.addShape("rect", {
+      x: barX, y: barY, w: barMaxW, h: barH,
+      fill: { color: STEEL_LIGHT }, line: { color: GRAY_LINE, width: 1 }
+    });
+    // Bar fill
+    s.addShape("rect", {
+      x: barX, y: barY, w: Math.max(barW, 0.15), h: barH,
+      fill: { color: isLeader ? YELLOW : NAVY }, line: { color: isLeader ? YELLOW : NAVY }
+    });
+
+    // Job count
+    s.addText(`${c.count} JOBS`, {
+      x: 11.4, y, w: 1.4, h: rowH,
+      fontFace: "Arial Black", fontSize: 18, color: NAVY_DARK, bold: true,
+      align: "right", valign: "middle", margin: 0
+    });
+  }
+
+  // Bottom banner
+  s.addShape("rect", { x: 0.5, y: 6.55, w: 12.333, h: 0.5,
+    fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
+  s.addText("KNOW YOUR TERRITORY  —  EVERY ZIP CODE IS AN OPPORTUNITY", {
+    x: 0.5, y: 6.55, w: 12.333, h: 0.5,
+    fontFace: "Arial Black", fontSize: 13, color: YELLOW, bold: true,
+    align: "center", valign: "middle", margin: 0, charSpacing: 2
+  });
+
+  addFooter(s, pres, slideLabel);
+}
+
 function buildKPIsSlide(s, pres, icons, { kpis }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "WEEKLY GOALS & NUMBERS", icons.fire);
@@ -1177,7 +1267,6 @@ export async function renderDeck(data, outputPath) {
     envelopeNavy:   await iconPng(FaEnvelope, "#0F1E3A", 320),
     calendar:       await iconPng(FaCalendarAlt, "#FFFFFF", 320),
     boxOpen:        await iconPng(FaBoxOpen, "#FFFFFF", 320),
-    exchange:       await iconPng(FaExchangeAlt, "#FFFFFF", 320),
     alert:          await iconPng(FaExclamationTriangle, "#FFFFFF", 320),
     trophy:         await iconPng(FaTrophy, "#FFFFFF", 320),
     clipboard:      await iconPng(FaClipboardList, "#FFFFFF", 320),
@@ -1188,22 +1277,28 @@ export async function renderDeck(data, outputPath) {
     hardHat:        await iconPng(FaHardHat, "#0F1E3A", 320),
     bell:           await iconPng(FaBell, "#FFFFFF", 320),
     starYellow:     await iconPng(FaStar, "#FFD000", 320),
-    arrowYellow:    await iconPng(FaArrowRight, "#FFD000", 320),
+    starGray:       await iconPng(FaStar, "#D1D8E2", 320),
+    starHeader:     await iconPng(FaStar, "#FFFFFF", 320),
+    quoteNavy:      await iconPng(FaQuoteLeft, "#0F1E3A", 320),
     mapPinNavy:     await iconPng(FaMapMarkerAlt, "#0F1E3A", 320),
+    mapMarked:      await iconPng(FaMapMarkedAlt, "#FFFFFF", 320),
     shield:         await iconPng(FaShieldAlt, "#FFFFFF", 320),
   };
 
+  // New slide order: cover, oncall, events, newitems, REVIEWS, jobboard,
+  // tagdurations, hygiene, safety?, shoutout?, SERVICE AREAS, kpis
   const plan = [];
   plan.push({ key: "cover",        label: "COVER" });
   plan.push({ key: "oncall",       label: "ON CALL" });
   plan.push({ key: "events",       label: "EVENTS" });
   plan.push({ key: "newitems",     label: "NEW ITEMS" });
-  plan.push({ key: "moveditems",   label: "MOVED" });
+  plan.push({ key: "reviews",      label: "REVIEWS" });
   plan.push({ key: "jobboard",     label: "JOB BOARD" });
   plan.push({ key: "tagdurations", label: "AVG TIMES" });
   plan.push({ key: "hygiene",      label: "TIME TRACKING" });
   if (data.safetyTopic) plan.push({ key: "safety",   label: "SAFETY" });
   if (data.shoutout)    plan.push({ key: "shoutout", label: "SHOUTOUT" });
+  plan.push({ key: "serviceareas", label: "SERVICE AREAS" });
   plan.push({ key: "kpis",         label: "GOALS" });
 
   const totalNumbered = plan.length - 1;
@@ -1245,8 +1340,8 @@ export async function renderDeck(data, outputPath) {
       case "newitems":
         buildNewItemsSlide(s, pres, icons, { newItems: data.newItems }, labelStr);
         break;
-      case "moveditems":
-        buildMovedItemsSlide(s, pres, icons, { movedItems: data.movedItems }, labelStr);
+      case "reviews":
+        buildGoogleReviewsSlide(s, pres, icons, { googleReviews: data.googleReviews }, labelStr);
         break;
       case "jobboard":
         buildJobBoardSlide(s, pres, icons, { jobBoard: data.jobBoard }, labelStr);
@@ -1262,6 +1357,9 @@ export async function renderDeck(data, outputPath) {
         break;
       case "shoutout":
         buildShoutoutSlide(s, pres, icons, { shoutout: data.shoutout }, labelStr);
+        break;
+      case "serviceareas":
+        buildServiceAreasSlide(s, pres, icons, { serviceAreas: data.serviceAreas }, labelStr);
         break;
       case "kpis":
         buildKPIsSlide(s, pres, icons, { kpis: data.kpis }, labelStr);
