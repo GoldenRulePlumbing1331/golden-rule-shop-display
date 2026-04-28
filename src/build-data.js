@@ -15,7 +15,7 @@ import {
   getCompletedByTech,
 } from "./jobs.js";
 import { readSheet, readCalendarEvents } from "./google.js";
-import NAME_OVERRIDES from "./name-overrides.js";
+import { overrideFirstName } from "./name-overrides.js";
 
 // ---------------------------------------------------------------------------
 // Date helpers
@@ -73,9 +73,8 @@ async function safe(label, fn) {
 
 function techDisplayName(fullName) {
   if (!fullName) return "";
-  const override = NAME_OVERRIDES[fullName];
-  if (override) return override;
-  return fullName.split(/\s+/)[0];
+  const firstName = fullName.split(/\s+/)[0];
+  return overrideFirstName(firstName);
 }
 
 // ---------------------------------------------------------------------------
