@@ -374,18 +374,10 @@ async function buildServiceAreas(thisMon, daysBack = 30) {
     endISO: thisMon.toISOString(),
   });
 
-  console.log(`[build-data] service areas: got ${completed.length} completed jobs`);
-  if (completed.length > 0) {
-    const sample = completed[0];
-    console.log(`[build-data] service areas: sample job keys:`, Object.keys(sample));
-    console.log(`[build-data] service areas: sample job.address:`, JSON.stringify(sample.address));
-  }
-
   // Aggregate by city
   const cityCounts = new Map();
   for (const job of completed) {
-    const addr = job.address || {};
-    const city = (addr.city || "").trim();
+    const city = (job.city || "").trim();
     if (!city) continue;
 
     // Normalize to title case for consistent display
