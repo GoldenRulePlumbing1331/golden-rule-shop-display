@@ -15,7 +15,7 @@ import {
   getCompletedByTech,
 } from "./jobs.js";
 import { readSheet, readCalendarEvents } from "./google.js";
-import { NAME_OVERRIDES } from "./name-overrides.js";
+import NAME_OVERRIDES from "./name-overrides.js";
 
 // ---------------------------------------------------------------------------
 // Date helpers
