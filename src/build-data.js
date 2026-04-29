@@ -68,21 +68,17 @@ async function safe(label, fn) {
 }
 
 // ---------------------------------------------------------------------------
-// Tech display name resolver — applies NAME_OVERRIDES then takes first name
+// Tech display name resolver
 // ---------------------------------------------------------------------------
 
 function techDisplayName(fullName) {
   if (!fullName) return "";
   const parts = fullName.split(/\s+/);
-  // Try progressively shorter prefixes, longest first.
-  // For "R Kevin Donnelly": try "R Kevin Donnelly", then "R Kevin", then "R"
-  // The override map keys with multi-word names (like "R Kevin") will catch the right tokenization.
   for (let i = parts.length; i >= 1; i--) {
     const candidate = parts.slice(0, i).join(" ");
     const overridden = overrideFirstName(candidate);
-    if (overridden !== candidate) return overridden; // Override matched
+    if (overridden !== candidate) return overridden;
   }
-  // No override matched — fall back to first token
   return parts[0];
 }
 
@@ -201,35 +197,32 @@ async function buildOnCall(sheetId, roster, thisMon, nextMon) {
   };
 }
 
-// Detect HCP jobs synced into the calendar — they have phone numbers or ZIP codes.
+// ---------------------------------------------------------------------------
+// Events — pulls from Housecall Pro calendar AND events sheet
+// Filters out HCP jobs (phone/zip), recurring ops, out-of-office, past events
+// ---------------------------------------------------------------------------
+
 function looksLikeHCPJob(title) {
   if (!title) return false;
-  // Phone number patterns: 610-431-1897, 610.431.1897, (610) 431-1897, 6104311897
   const phoneRegex = /\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/;
   if (phoneRegex.test(title)) return true;
-  // ZIP code pattern: 5 digits surrounded by word boundaries
   const zipRegex = /\b\d{5}\b/;
   if (zipRegex.test(title)) return true;
   return false;
 }
 
-// Detect recurring operational events that are already shown on Cover/On-Call slides.
 function isOperationalRecurring(title) {
   if (!title) return false;
   const t = title.toLowerCase();
-  // Match patterns like "KYLE - Dispatch/Phones/Admin" or "TJ - Material Runs/..."
   if (t.includes("dispatch")) return true;
   if (t.includes("material run")) return true;
   if (t.includes("phones/admin")) return true;
   return false;
 }
 
-// Detect "out of office" / vacation / sick entries — not events per se.
 function isOutOfOffice(title) {
   if (!title) return false;
   const t = title.trim().toLowerCase();
-  // Match patterns like "MATT - Out", "BRETT - Brett Out", "KYLE - Doctor", "DOM - Vacation"
-  // The pattern is usually "TECHNAME - <single short word about absence>"
   const outKeywords = [
     "- out", "- off", "- vacation", "- sick", "- doctor", "- dr.",
     "- pto", "- leave", "- appointment", "- appt",
@@ -240,28 +233,54 @@ function isOutOfOffice(title) {
   return false;
 }
 
-async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 2) {
+async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 4) {
+  // Pull a wider window — 4 weeks instead of 2 — so we don't miss anything
+  const startRange = thisMon; // start of this week
   const endRange = addDays(thisMon, 7 * weeksOut);
-  const nowISO = new Date().toISOString();
+
+  console.log(`[build-data] events: calendar ID = ${calendarId}`);
+  console.log(`[build-data] events: window ${startRange.toISOString()} → ${endRange.toISOString()}`);
+
   const events = [];
+  const todayDateOnly = new Date().toISOString().slice(0, 10);
+  console.log(`[build-data] events: today = ${todayDateOnly} (events earlier than this date will be filtered out)`);
+
+  let calRawCount = 0;
+  let calAfterFilters = 0;
+  const droppedExamples = { hcpJob: [], recurring: [], outOfOffice: [], past: [] };
 
   try {
     const calEvents = await readCalendarEvents(calendarId, {
-      startISO: thisMon.toISOString(),
+      startISO: startRange.toISOString(),
       endISO: endRange.toISOString(),
     });
+    calRawCount = calEvents.length;
+    console.log(`[build-data] events: pulled ${calRawCount} raw items from calendar`);
+
+    // Show first 5 raw titles so we can see what's actually in there
+    if (calRawCount > 0) {
+      const sampleTitles = calEvents.slice(0, 5).map(e => `"${e.summary || "(no title)"}"`).join(", ");
+      console.log(`[build-data] events: first 5 raw titles: ${sampleTitles}`);
+    }
+
     for (const e of calEvents) {
       const start = e.start?.dateTime || e.start?.date;
       if (!start) continue;
 
       const title = e.summary || "(untitled)";
 
-      // Filter: skip HCP jobs (have phone or ZIP)
-      if (looksLikeHCPJob(title)) continue;
-      // Filter: skip recurring Dispatch / Material Runs events (shown elsewhere)
-      if (isOperationalRecurring(title)) continue;
-      // Filter: skip "out of office" / personal absence entries
-      if (isOutOfOffice(title)) continue;
+      if (looksLikeHCPJob(title)) {
+        if (droppedExamples.hcpJob.length < 3) droppedExamples.hcpJob.push(title);
+        continue;
+      }
+      if (isOperationalRecurring(title)) {
+        if (droppedExamples.recurring.length < 3) droppedExamples.recurring.push(title);
+        continue;
+      }
+      if (isOutOfOffice(title)) {
+        if (droppedExamples.outOfOffice.length < 3) droppedExamples.outOfOffice.push(title);
+        continue;
+      }
 
       events.push({
         source: "calendar",
@@ -270,6 +289,17 @@ async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 2) {
         location: e.location || "",
         category: "EVENT",
       });
+      calAfterFilters += 1;
+    }
+    console.log(`[build-data] events: ${calAfterFilters} calendar items survived content filters (out of ${calRawCount})`);
+    if (droppedExamples.hcpJob.length > 0) {
+      console.log(`[build-data] events: dropped as HCP jobs (sample): ${droppedExamples.hcpJob.map(t => `"${t}"`).join(", ")}`);
+    }
+    if (droppedExamples.recurring.length > 0) {
+      console.log(`[build-data] events: dropped as recurring ops (sample): ${droppedExamples.recurring.map(t => `"${t}"`).join(", ")}`);
+    }
+    if (droppedExamples.outOfOffice.length > 0) {
+      console.log(`[build-data] events: dropped as out-of-office (sample): ${droppedExamples.outOfOffice.map(t => `"${t}"`).join(", ")}`);
     }
   } catch (e) {
     console.warn(`[build-data] calendar fetch failed: ${e.message}`);
@@ -292,17 +322,29 @@ async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 2) {
     console.warn(`[build-data] events sheet fetch failed: ${e.message}`);
   }
 
-  // Filter out anything in the past (already happened)
+  // Past-event filter: drop only events whose date is BEFORE today.
+  // Today's events are kept regardless of the time of day.
+  let droppedPastCount = 0;
   const futureEvents = events.filter(e => {
-    // Calendar all-day events come in as date-only (YYYY-MM-DD)
-    // Compare by date for those, by full timestamp for timed events
-    if (e.startISO.length === 10) {
-      // All-day: include if today or later
-      const todayISO = nowISO.slice(0, 10);
-      return e.startISO >= todayISO;
+    const eventDateOnly = e.startISO.slice(0, 10);
+    if (eventDateOnly < todayDateOnly) {
+      if (droppedExamples.past.length < 3) droppedExamples.past.push(`"${e.title}" (${eventDateOnly})`);
+      droppedPastCount += 1;
+      return false;
     }
-    return e.startISO >= nowISO;
+    return true;
   });
+
+  console.log(`[build-data] events: ${droppedPastCount} events dropped for being in the past`);
+  if (droppedExamples.past.length > 0) {
+    console.log(`[build-data] events: dropped as past (sample): ${droppedExamples.past.join(", ")}`);
+  }
+  console.log(`[build-data] events: ${futureEvents.length} total events going to slide (after all filters)`);
+
+  if (futureEvents.length > 0) {
+    const titles = futureEvents.slice(0, 8).map(e => `"${e.title}" (${e.startISO.slice(0, 10)})`).join(", ");
+    console.log(`[build-data] events: final list = ${titles}`);
+  }
 
   futureEvents.sort((a, b) => a.startISO.localeCompare(b.startISO));
   return futureEvents.slice(0, 8);
@@ -371,7 +413,7 @@ async function buildShoutout(sheetId, roster) {
 }
 
 // ---------------------------------------------------------------------------
-// Google Reviews — pulls featured 5-star reviews from sheet
+// Google Reviews
 // ---------------------------------------------------------------------------
 
 function isTruthy(val) {
@@ -387,14 +429,12 @@ async function buildGoogleReviews(sheetId, roster) {
   const rows = await readSheet(sheetId, "google_reviews");
   if (rows.length === 0) return [];
 
-  // Filter to featured rows only, sort by review_date desc
   const featured = rows
     .filter(r => isTruthy(r.featured) && r.review_text)
     .sort((a, b) => (b.review_date || "").localeCompare(a.review_date || ""));
 
   if (featured.length === 0) return [];
 
-  // Map each row to a review object with tech name lookup
   const mapped = featured.map(r => {
     let techDisplay = "";
     if (r.tech_employee_id) {
@@ -413,20 +453,19 @@ async function buildGoogleReviews(sheetId, roster) {
     };
   });
 
-  // Pick exactly 3 to display, repeating the most recent if fewer
   const result = [];
   for (let i = 0; i < 3; i++) {
     if (i < mapped.length) {
       result.push(mapped[i]);
     } else {
-      result.push(mapped[0]); // repeat most recent
+      result.push(mapped[0]);
     }
   }
   return result;
 }
 
 // ---------------------------------------------------------------------------
-// Service Areas — counts completed jobs by city, last 30 days
+// Service Areas
 // ---------------------------------------------------------------------------
 
 async function buildServiceAreas(thisMon, daysBack = 30) {
@@ -436,13 +475,11 @@ async function buildServiceAreas(thisMon, daysBack = 30) {
     endISO: thisMon.toISOString(),
   });
 
-  // Aggregate by city
   const cityCounts = new Map();
   for (const job of completed) {
     const city = (job.city || "").trim();
     if (!city) continue;
 
-    // Normalize to title case for consistent display
     const normalized = city.split(/\s+/)
       .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(" ");
@@ -450,7 +487,6 @@ async function buildServiceAreas(thisMon, daysBack = 30) {
     cityCounts.set(normalized, (cityCounts.get(normalized) || 0) + 1);
   }
 
-  // Convert to sorted array, top 7
   const sorted = [...cityCounts.entries()]
     .map(([city, count]) => ({ city, count }))
     .sort((a, b) => b.count - a.count)
