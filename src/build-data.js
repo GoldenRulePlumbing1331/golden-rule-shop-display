@@ -199,7 +199,7 @@ async function buildOnCall(sheetId, roster, thisMon, nextMon) {
 
 // ---------------------------------------------------------------------------
 // Events — pulls from Housecall Pro calendar AND events sheet
-// Filters out HCP jobs (phone/zip), recurring ops, out-of-office, past events
+// Filters out HCP jobs and recurring ops; keeps PTO/out-of-office entries
 // ---------------------------------------------------------------------------
 
 function looksLikeHCPJob(title) {
@@ -217,25 +217,14 @@ function isOperationalRecurring(title) {
   if (t.includes("dispatch")) return true;
   if (t.includes("material run")) return true;
   if (t.includes("phones/admin")) return true;
-  return false;
-}
-
-function isOutOfOffice(title) {
-  if (!title) return false;
-  const t = title.trim().toLowerCase();
-  const outKeywords = [
-    "- out", "- off", "- vacation", "- sick", "- doctor", "- dr.",
-    "- pto", "- leave", "- appointment", "- appt",
-  ];
-  for (const kw of outKeywords) {
-    if (t.includes(kw)) return true;
-  }
+  if (t.includes("emergency phone")) return true;
+  if (t.includes("on call")) return true;
+  if (t.includes("on-call")) return true;
   return false;
 }
 
 async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 4) {
-  // Pull a wider window — 4 weeks instead of 2 — so we don't miss anything
-  const startRange = thisMon; // start of this week
+  const startRange = thisMon;
   const endRange = addDays(thisMon, 7 * weeksOut);
 
   console.log(`[build-data] events: calendar ID = ${calendarId}`);
@@ -247,7 +236,7 @@ async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 4) {
 
   let calRawCount = 0;
   let calAfterFilters = 0;
-  const droppedExamples = { hcpJob: [], recurring: [], outOfOffice: [], past: [] };
+  const droppedExamples = { hcpJob: [], recurring: [], past: [] };
 
   try {
     const calEvents = await readCalendarEvents(calendarId, {
@@ -257,10 +246,14 @@ async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 4) {
     calRawCount = calEvents.length;
     console.log(`[build-data] events: pulled ${calRawCount} raw items from calendar`);
 
-    // Show first 5 raw titles so we can see what's actually in there
     if (calRawCount > 0) {
-      const sampleTitles = calEvents.slice(0, 5).map(e => `"${e.summary || "(no title)"}"`).join(", ");
-      console.log(`[build-data] events: first 5 raw titles: ${sampleTitles}`);
+      console.log(`[build-data] events: all ${calRawCount} raw items:`);
+      for (const e of calEvents) {
+        const start = e.start?.dateTime || e.start?.date || "no-date";
+        const dateOnly = start.slice(0, 10);
+        const title = e.summary || "(no title)";
+        console.log(`  - [${dateOnly}] "${title}"`);
+      }
     }
 
     for (const e of calEvents) {
@@ -275,10 +268,6 @@ async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 4) {
       }
       if (isOperationalRecurring(title)) {
         if (droppedExamples.recurring.length < 3) droppedExamples.recurring.push(title);
-        continue;
-      }
-      if (isOutOfOffice(title)) {
-        if (droppedExamples.outOfOffice.length < 3) droppedExamples.outOfOffice.push(title);
         continue;
       }
 
@@ -297,9 +286,6 @@ async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 4) {
     }
     if (droppedExamples.recurring.length > 0) {
       console.log(`[build-data] events: dropped as recurring ops (sample): ${droppedExamples.recurring.map(t => `"${t}"`).join(", ")}`);
-    }
-    if (droppedExamples.outOfOffice.length > 0) {
-      console.log(`[build-data] events: dropped as out-of-office (sample): ${droppedExamples.outOfOffice.map(t => `"${t}"`).join(", ")}`);
     }
   } catch (e) {
     console.warn(`[build-data] calendar fetch failed: ${e.message}`);
