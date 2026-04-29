@@ -304,65 +304,85 @@ function buildEventsSlide(s, pres, icons, { events }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "UPCOMING EVENTS & DEADLINES", icons.calendar);
 
-  const cards = events.slice(0, 4).map(e => {
+  const cards = events.slice(0, 8).map(e => {
     const { day, date } = fmtEventDate(e.startISO);
     return {
       day, date,
       title: (e.title || "").toUpperCase(),
       time: e.location || "",
-      tag: (e.category || "MEETING").toUpperCase(),
-      tagColor: eventTagColor(e.category),
     };
   });
-  while (cards.length < 4) {
-    cards.push({ day: "—", date: "", title: "(no event)", time: "", tag: "—", tagColor: GRAY_MUTED });
+  while (cards.length < 8) {
+    cards.push({ day: "—", date: "", title: "(no event)", time: "" });
   }
 
-  const positions = [
-    { x: 0.5,  y: 1.2 },
-    { x: 6.92, y: 1.2 },
-    { x: 0.5,  y: 4.15 },
-    { x: 6.92, y: 4.15 },
-  ];
+  // 4 columns × 2 rows layout
+  const gridLeft = 0.5;
+  const gridRight = 12.833;
+  const gridTop = 1.2;
+  const gridBottom = 7.0;
+  const gap = 0.18;
+
+  const cardW = (gridRight - gridLeft - 3 * gap) / 4;
+  const cardH = (gridBottom - gridTop - gap) / 2;
+
+  const positions = [];
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < 4; col++) {
+      positions.push({
+        x: gridLeft + col * (cardW + gap),
+        y: gridTop + row * (cardH + gap),
+      });
+    }
+  }
 
   for (let i = 0; i < cards.length; i++) {
     const c = cards[i];
     const p = positions[i];
-    const cardW = 5.91, cardH = 2.8;
+
+    // Card background
     s.addShape("rect", {
       x: p.x, y: p.y, w: cardW, h: cardH,
       fill: { color: WHITE }, line: { color: GRAY_LINE, width: 1 },
-      shadow: { type: "outer", color: "000000", blur: 8, offset: 2, angle: 90, opacity: 0.08 }
+      shadow: { type: "outer", color: "000000", blur: 6, offset: 2, angle: 90, opacity: 0.06 }
     });
-    s.addShape("rect", { x: p.x, y: p.y, w: 1.5, h: cardH, fill: { color: NAVY_DARK }, line: { color: NAVY_DARK } });
-    s.addText(c.day, {
-      x: p.x, y: p.y + 0.4, w: 1.5, h: 0.5,
-      fontFace: "Arial Black", fontSize: 24, color: YELLOW, bold: true,
-      align: "center", valign: "middle", margin: 0, charSpacing: 3
-    });
-    s.addText(c.date, {
-      x: p.x, y: p.y + 0.9, w: 1.5, h: 1.4,
-      fontFace: "Arial Black", fontSize: 56, color: WHITE, bold: true,
-      align: "center", valign: "middle", margin: 0
-    });
+
+    // Date block (top portion)
+    const dateBlockH = cardH * 0.45;
     s.addShape("rect", {
-      x: p.x + 1.75, y: p.y + 0.3, w: 1.6, h: 0.35,
-      fill: { color: c.tagColor }, line: { color: c.tagColor }
+      x: p.x, y: p.y, w: cardW, h: dateBlockH,
+      fill: { color: NAVY_DARK }, line: { color: NAVY_DARK }
     });
-    s.addText(c.tag, {
-      x: p.x + 1.75, y: p.y + 0.3, w: 1.6, h: 0.35,
-      fontFace: "Arial", fontSize: 10, color: WHITE, bold: true,
+
+    // Day name (small, yellow)
+    s.addText(c.day, {
+      x: p.x, y: p.y + 0.1, w: cardW, h: 0.32,
+      fontFace: "Arial Black", fontSize: 14, color: YELLOW, bold: true,
       align: "center", valign: "middle", margin: 0, charSpacing: 2
     });
-    s.addText(c.title, {
-      x: p.x + 1.75, y: p.y + 0.85, w: 4.0, h: 1.0,
-      fontFace: "Arial Black", fontSize: 18, color: NAVY_DARK, bold: true,
-      valign: "top", margin: 0
+
+    // Date number (large, white)
+    s.addText(c.date, {
+      x: p.x, y: p.y + 0.42, w: cardW, h: dateBlockH - 0.5,
+      fontFace: "Arial Black", fontSize: 38, color: WHITE, bold: true,
+      align: "center", valign: "middle", margin: 0
     });
+
+    // Title (below date block)
+    const titleY = p.y + dateBlockH + 0.1;
+    const titleH = cardH * 0.35;
+    s.addText(c.title, {
+      x: p.x + 0.12, y: titleY, w: cardW - 0.24, h: titleH,
+      fontFace: "Arial Black", fontSize: 11, color: NAVY_DARK, bold: true,
+      align: "center", valign: "top", margin: 0
+    });
+
+    // Time / location (bottom)
+    const timeY = p.y + cardH - 0.4;
     s.addText(c.time, {
-      x: p.x + 1.75, y: p.y + 2.1, w: 4.0, h: 0.45,
-      fontFace: "Arial", fontSize: 14, color: GRAY_TEXT, bold: true,
-      valign: "middle", margin: 0
+      x: p.x + 0.12, y: timeY, w: cardW - 0.24, h: 0.3,
+      fontFace: "Arial", fontSize: 9, color: GRAY_TEXT, bold: true,
+      align: "center", valign: "middle", margin: 0
     });
   }
   addFooter(s, pres, slideLabel);
