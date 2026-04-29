@@ -819,14 +819,20 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
   });
 
   const xLed = x7 + col7Block;
-  s.addText("LED", {
+  s.addText([
+    { text: "LED ", options: {} },
+    { text: "(7D)", options: { fontSize: 8 } },
+  ], {
     x: xLed, y: tableY, w: colLed, h: headerH,
     fontFace: "Arial Black", fontSize: 11, color: YELLOW, bold: true,
     align: "center", valign: "middle", margin: 0, charSpacing: 2
   });
 
   const xAssigned = xLed + colLed;
-  s.addText("ASSIGNED", {
+  s.addText([
+    { text: "ASSIGNED ", options: {} },
+    { text: "(7D)", options: { fontSize: 8 } },
+  ], {
     x: xAssigned, y: tableY, w: colAssigned, h: headerH,
     fontFace: "Arial Black", fontSize: 11, color: YELLOW, bold: true,
     align: "center", valign: "middle", margin: 0, charSpacing: 2
