@@ -1159,8 +1159,8 @@ function buildTimeTrackingSlideHTML({ hygiene }, slideLabel) {
           <div class="tt-cell">TECH</div>
           <div class="tt-cell center banner-30">LAST 30 DAYS</div>
           <div class="tt-cell center banner-7">LAST 7 DAYS</div>
-          <div class="tt-cell center">LED</div>
-          <div class="tt-cell center">ASSIGNED</div>
+          <div class="tt-cell center">LED <span style="font-size: 0.7em; opacity: 0.8;">(7D)</span></div>
+          <div class="tt-cell center">ASSIGNED <span style="font-size: 0.7em; opacity: 0.8;">(7D)</span></div>
         </div>
         ${bodyRows}
       </div>
