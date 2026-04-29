@@ -201,8 +201,48 @@ async function buildOnCall(sheetId, roster, thisMon, nextMon) {
   };
 }
 
+// Detect HCP jobs synced into the calendar — they have phone numbers or ZIP codes.
+function looksLikeHCPJob(title) {
+  if (!title) return false;
+  // Phone number patterns: 610-431-1897, 610.431.1897, (610) 431-1897, 6104311897
+  const phoneRegex = /\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/;
+  if (phoneRegex.test(title)) return true;
+  // ZIP code pattern: 5 digits surrounded by word boundaries
+  const zipRegex = /\b\d{5}\b/;
+  if (zipRegex.test(title)) return true;
+  return false;
+}
+
+// Detect recurring operational events that are already shown on Cover/On-Call slides.
+function isOperationalRecurring(title) {
+  if (!title) return false;
+  const t = title.toLowerCase();
+  // Match patterns like "KYLE - Dispatch/Phones/Admin" or "TJ - Material Runs/..."
+  if (t.includes("dispatch")) return true;
+  if (t.includes("material run")) return true;
+  if (t.includes("phones/admin")) return true;
+  return false;
+}
+
+// Detect "out of office" / vacation / sick entries — not events per se.
+function isOutOfOffice(title) {
+  if (!title) return false;
+  const t = title.trim().toLowerCase();
+  // Match patterns like "MATT - Out", "BRETT - Brett Out", "KYLE - Doctor", "DOM - Vacation"
+  // The pattern is usually "TECHNAME - <single short word about absence>"
+  const outKeywords = [
+    "- out", "- off", "- vacation", "- sick", "- doctor", "- dr.",
+    "- pto", "- leave", "- appointment", "- appt",
+  ];
+  for (const kw of outKeywords) {
+    if (t.includes(kw)) return true;
+  }
+  return false;
+}
+
 async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 2) {
   const endRange = addDays(thisMon, 7 * weeksOut);
+  const nowISO = new Date().toISOString();
   const events = [];
 
   try {
@@ -213,12 +253,22 @@ async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 2) {
     for (const e of calEvents) {
       const start = e.start?.dateTime || e.start?.date;
       if (!start) continue;
+
+      const title = e.summary || "(untitled)";
+
+      // Filter: skip HCP jobs (have phone or ZIP)
+      if (looksLikeHCPJob(title)) continue;
+      // Filter: skip recurring Dispatch / Material Runs events (shown elsewhere)
+      if (isOperationalRecurring(title)) continue;
+      // Filter: skip "out of office" / personal absence entries
+      if (isOutOfOffice(title)) continue;
+
       events.push({
         source: "calendar",
         startISO: start,
-        title: e.summary || "(untitled)",
+        title,
         location: e.location || "",
-        category: "MEETING",
+        category: "EVENT",
       });
     }
   } catch (e) {
@@ -234,7 +284,7 @@ async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 2) {
         startISO: r.date,
         title: r.title || "(untitled)",
         location: r.time_location || "",
-        category: r.category || "MEETING",
+        category: r.category || "EVENT",
         notes: r.notes || "",
       });
     }
@@ -242,8 +292,20 @@ async function buildEvents(sheetId, calendarId, thisMon, weeksOut = 2) {
     console.warn(`[build-data] events sheet fetch failed: ${e.message}`);
   }
 
-  events.sort((a, b) => a.startISO.localeCompare(b.startISO));
-  return events.slice(0, 4);
+  // Filter out anything in the past (already happened)
+  const futureEvents = events.filter(e => {
+    // Calendar all-day events come in as date-only (YYYY-MM-DD)
+    // Compare by date for those, by full timestamp for timed events
+    if (e.startISO.length === 10) {
+      // All-day: include if today or later
+      const todayISO = nowISO.slice(0, 10);
+      return e.startISO >= todayISO;
+    }
+    return e.startISO >= nowISO;
+  });
+
+  futureEvents.sort((a, b) => a.startISO.localeCompare(b.startISO));
+  return futureEvents.slice(0, 8);
 }
 
 async function buildNewItems(sheetId) {
