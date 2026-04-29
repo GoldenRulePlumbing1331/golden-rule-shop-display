@@ -738,7 +738,7 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
   s.background = { color: STEEL_LIGHT };
   addHeaderBar(s, pres, "TIME TRACKING — HCP BUTTONS", icons.bell);
 
-  s.addText("ON MY WAY  /  START  /  FINISH  —  COMPLIANCE BY TECH  ·  LAST 7 DAYS", {
+  s.addText("EACH BLOCK READS:  ON MY WAY  →  START  →  FINISH  ·  COMPLIANCE BY TECH", {
     x: 0.5, y: 1.05, w: 12.3, h: 0.45,
     fontFace: "Arial", fontSize: 13, color: GRAY_MUTED, bold: true,
     valign: "middle", margin: 0, charSpacing: 2
@@ -832,39 +832,6 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
     align: "center", valign: "middle", margin: 0, charSpacing: 2
   });
 
-  // Sub-header row
-  const subY = tableY + headerH;
-  const subH = 0.26;
-  s.addShape("rect", {
-    x: tableX, y: subY, w: tableW, h: subH,
-    fill: { color: STEEL_LIGHT }, line: { color: GRAY_LINE, width: 1 }
-  });
-  const subFor = (xStart, blockW) => {
-    const labels = ["OMW", "START", "FINISH"];
-    const cw = blockW / 3;
-    for (let i = 0; i < 3; i++) {
-      s.addText(labels[i], {
-        x: xStart + i * cw, y: subY, w: cw, h: subH,
-        fontFace: "Arial", fontSize: 9, color: GRAY_TEXT, bold: true,
-        align: "center", valign: "middle", margin: 0, charSpacing: 2
-      });
-    }
-  };
-  subFor(x30, col30Block);
-  subFor(x7, col7Block);
-
-  // Sub-labels for LED / ASSIGNED columns
-  s.addText("(7 DAYS)", {
-    x: xLed, y: subY, w: colLed, h: subH,
-    fontFace: "Arial", fontSize: 8, color: GRAY_TEXT, bold: true,
-    align: "center", valign: "middle", margin: 0, charSpacing: 1
-  });
-  s.addText("(7 DAYS)", {
-    x: xAssigned, y: subY, w: colAssigned, h: subH,
-    fontFace: "Arial", fontSize: 8, color: GRAY_TEXT, bold: true,
-    align: "center", valign: "middle", margin: 0, charSpacing: 1
-  });
-
   // Cell color helpers
   const cellColor = (pct) => {
     if (pct === null) return STEEL_LIGHT;
@@ -880,7 +847,7 @@ function buildTimeTrackingSlide(s, pres, icons, { hygiene }, slideLabel) {
   const fmtPct = (pct) => pct === null ? "—" : `${pct}%`;
 
   // Body rows
-  const bodyY = subY + subH;
+  const bodyY = tableY + headerH;
   for (let i = 0; i < visibleRows; i++) {
     const row = allRows[i];
     const y = bodyY + i * rowH;
