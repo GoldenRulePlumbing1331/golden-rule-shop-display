@@ -1153,7 +1153,7 @@ function buildTimeTrackingSlideHTML({ hygiene }, slideLabel) {
   return `
     ${htmlHeader("TIME TRACKING — HCP BUTTONS")}
     <div class="slide-body">
-      <div class="subhead">ON MY WAY  /  START  /  FINISH  —  COMPLIANCE BY TECH  ·  LAST 7 DAYS</div>
+      <div class="subhead">EACH BLOCK READS:  ON MY WAY  →  START  →  FINISH  ·  COMPLIANCE BY TECH</div>
       <div class="tt-table">
         <div class="tt-row head">
           <div class="tt-cell">TECH</div>
@@ -1161,21 +1161,6 @@ function buildTimeTrackingSlideHTML({ hygiene }, slideLabel) {
           <div class="tt-cell center banner-7">LAST 7 DAYS</div>
           <div class="tt-cell center">LED</div>
           <div class="tt-cell center">ASSIGNED</div>
-        </div>
-        <div class="tt-row subhead">
-          <div class="tt-subhead-empty"></div>
-          <div class="tt-subblock">
-            <div class="tt-subcell">OMW</div>
-            <div class="tt-subcell">START</div>
-            <div class="tt-subcell">FINISH</div>
-          </div>
-          <div class="tt-subblock">
-            <div class="tt-subcell">OMW</div>
-            <div class="tt-subcell">START</div>
-            <div class="tt-subcell">FINISH</div>
-          </div>
-          <div class="tt-subhead-label">(7 DAYS)</div>
-          <div class="tt-subhead-label">(7 DAYS)</div>
         </div>
         ${bodyRows}
       </div>
