@@ -69,16 +69,35 @@ export async function readCalendarEvents(calendarId, { startISO, endISO } = {}) 
   const auth = await getAuth().getClient();
   const calendar = google.calendar({ version: "v3", auth });
 
-  const resp = await calendar.events.list({
-    calendarId,
-    timeMin: startISO,
-    timeMax: endISO,
-    singleEvents: true,
-    orderBy: "startTime",
-    maxResults: 50,
-  });
+  const allEvents = [];
+  let pageToken = undefined;
+  let pageCount = 0;
+  const MAX_PAGES = 20; // safety cap — 20 pages × 250 events = 5000 events max
 
-  return resp.data.items || [];
+  while (true) {
+    const resp = await calendar.events.list({
+      calendarId,
+      timeMin: startISO,
+      timeMax: endISO,
+      singleEvents: true,
+      orderBy: "startTime",
+      maxResults: 250, // API maximum per page
+      pageToken,
+    });
+
+    const items = resp.data.items || [];
+    allEvents.push(...items);
+    pageCount += 1;
+
+    pageToken = resp.data.nextPageToken;
+    if (!pageToken) break;
+    if (pageCount >= MAX_PAGES) {
+      console.warn(`[google] readCalendarEvents: hit MAX_PAGES (${MAX_PAGES}) — there may be more events not fetched`);
+      break;
+    }
+  }
+
+  return allEvents;
 }
 
 // ---- Drive ----
