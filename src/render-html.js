@@ -250,42 +250,59 @@ function buildCSS() {
     .oncall .card.next-week .placeholder-sub { color: ${COLORS.GRAY_MUTED}; }
 
     .events-grid {
-      position: absolute; top: 1.5%; left: 3.75%; right: 3.75%; bottom: 1.5%;
-      display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 1.5%;
+      position: absolute;
+      top: 1.5%; left: 3.75%; right: 3.75%; bottom: 1.5%;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 1.2%;
     }
     .event-card {
       background: ${COLORS.WHITE}; border: 1px solid ${COLORS.GRAY_LINE};
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      display: flex; overflow: hidden;
+      display: flex; flex-direction: column;
+      overflow: hidden;
     }
     .event-card .date-block {
-      width: 24%; background: ${COLORS.NAVY_DARK};
+      height: 45%;
+      background: ${COLORS.NAVY_DARK};
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      flex-shrink: 0; padding: 6%;
+      flex-shrink: 0; padding: 4%;
     }
     .event-card .date-block .day {
       font-family: 'Arial Black', sans-serif;
-      color: ${COLORS.YELLOW}; font-size: 1.8vw; font-weight: 900; letter-spacing: 0.12em;
+      color: ${COLORS.YELLOW}; font-size: 1.1vw; font-weight: 900; letter-spacing: 0.14em;
+      margin-bottom: 2%;
     }
     .event-card .date-block .date {
       font-family: 'Arial Black', sans-serif;
-      color: ${COLORS.WHITE}; font-size: 4vw; font-weight: 900; line-height: 1;
+      color: ${COLORS.WHITE}; font-size: 2.6vw; font-weight: 900; line-height: 1;
     }
     .event-card .info {
-      flex: 1; padding: 3% 4%;
-      display: flex; flex-direction: column; justify-content: space-between;
-    }
-    .event-card .tag {
-      align-self: flex-start; padding: 0.4% 1.4%;
-      color: ${COLORS.WHITE}; font-size: 0.75vw; font-weight: bold; letter-spacing: 0.12em;
+      flex: 1; padding: 4% 6%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: space-between;
+      text-align: center;
+      overflow: hidden;
     }
     .event-card .title {
       font-family: 'Arial Black', sans-serif;
-      color: ${COLORS.NAVY_DARK}; font-size: 1.35vw; font-weight: 900;
-      line-height: 1.2; margin: 4% 0;
+      color: ${COLORS.NAVY_DARK}; font-size: 0.95vw; font-weight: 900;
+      line-height: 1.25;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
     }
-    .event-card .time { color: ${COLORS.GRAY_TEXT}; font-size: 1vw; font-weight: bold; }
+    .event-card .time {
+      color: ${COLORS.GRAY_TEXT}; font-size: 0.75vw; font-weight: bold;
+      margin-top: auto;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
 
     .subhead {
       position: absolute; top: 1.5%; left: 3.75%;
@@ -877,18 +894,16 @@ function buildOnCallSlideHTML({ onCall }, slideLabel) {
 }
 
 function buildEventsSlideHTML({ events }, slideLabel) {
-  const cards = events.slice(0, 4).map(e => {
+  const cards = events.slice(0, 8).map(e => {
     const { day, date } = fmtEventDate(e.startISO);
     return {
       day, date,
       title: (e.title || "").toUpperCase(),
       time: e.location || "",
-      tag: (e.category || "MEETING").toUpperCase(),
-      tagColor: eventTagColor(e.category),
     };
   });
-  while (cards.length < 4) {
-    cards.push({ day: "—", date: "", title: "(no event)", time: "", tag: "—", tagColor: COLORS.GRAY_MUTED });
+  while (cards.length < 8) {
+    cards.push({ day: "—", date: "", title: "(no event)", time: "" });
   }
   const cardHTML = cards.map(c => `
     <div class="event-card">
@@ -897,7 +912,6 @@ function buildEventsSlideHTML({ events }, slideLabel) {
         <div class="date">${escapeHtml(c.date)}</div>
       </div>
       <div class="info">
-        <div class="tag" style="background: ${c.tagColor}">${escapeHtml(c.tag)}</div>
         <div class="title">${escapeHtml(c.title)}</div>
         <div class="time">${escapeHtml(c.time)}</div>
       </div>
