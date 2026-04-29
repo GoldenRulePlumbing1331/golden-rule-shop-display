@@ -541,8 +541,11 @@ function buildCSS() {
       border-top: 1px solid ${COLORS.GRAY_LINE};
       border-bottom: 1px solid ${COLORS.GRAY_LINE};
     }
-    .tt-row.subhead > div {
-      display: flex; align-items: center; justify-content: center; height: 100%;
+    .tt-row.subhead > div:not(.tt-subblock) {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
     }
     .tt-row.subhead .tt-subblock {
       display: grid; grid-template-columns: 1fr 1fr 1fr;
