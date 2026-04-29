@@ -541,17 +541,26 @@ function buildCSS() {
       border-top: 1px solid ${COLORS.GRAY_LINE};
       border-bottom: 1px solid ${COLORS.GRAY_LINE};
     }
-    .tt-row.subhead > div:not(.tt-subblock) {
+    .tt-subhead-empty {
+      width: 100%; height: 100%;
+    }
+    .tt-subhead-label {
+      width: 100%; height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100%;
     }
     .tt-row.subhead .tt-subblock {
-      display: grid; grid-template-columns: 1fr 1fr 1fr;
-      align-items: stretch; height: 100%;
+      width: 100%; height: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      align-items: stretch;
     }
-    .tt-row.subhead .tt-subcell { display: flex; align-items: center; justify-content: center; }
+    .tt-row.subhead .tt-subcell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     .tt-row.body { flex: 1; min-height: 0; font-size: 0.95vw; }
     .tt-row.body.alt { background: ${COLORS.STEEL_LIGHT}; }
     .tt-row.body:not(.alt) { background: ${COLORS.WHITE}; }
@@ -1154,7 +1163,7 @@ function buildTimeTrackingSlideHTML({ hygiene }, slideLabel) {
           <div class="tt-cell center">ASSIGNED</div>
         </div>
         <div class="tt-row subhead">
-          <div></div>
+          <div class="tt-subhead-empty"></div>
           <div class="tt-subblock">
             <div class="tt-subcell">OMW</div>
             <div class="tt-subcell">START</div>
@@ -1165,8 +1174,8 @@ function buildTimeTrackingSlideHTML({ hygiene }, slideLabel) {
             <div class="tt-subcell">START</div>
             <div class="tt-subcell">FINISH</div>
           </div>
-          <div>(7 DAYS)</div>
-          <div>(7 DAYS)</div>
+          <div class="tt-subhead-label">(7 DAYS)</div>
+          <div class="tt-subhead-label">(7 DAYS)</div>
         </div>
         ${bodyRows}
       </div>
