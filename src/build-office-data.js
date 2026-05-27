@@ -368,23 +368,24 @@ async function pullOpenEstimates() {
   ]);
 
   const openEstimates = allEstimates.filter(est => {
-    // Must have been delivered
+    // Must have been delivered (tech went to the customer)
     if (!DELIVERED_STATUSES.has(est.work_status)) return false;
 
     // Must have at least one option
     const options = est.options || [];
     if (options.length === 0) return false;
 
-    // Take the first option as canonical (most estimates have just one)
+    // Take the first option as canonical
     const opt = options[0];
 
-    // Must have a real dollar amount
-    const amount = opt.total_amount || 0;
-    if (amount <= 0) return false;
-
-    // Must not yet be approved or rejected
+    // Must NOT have been approved or rejected — still open
     const approval = opt.approval_status;
     if (approval === "approved" || approval === "rejected") return false;
+
+    // ONLY show estimates with $0 total — these are the ones missing pricing,
+    // where a tech delivered but no line items were entered. Sales/ops follow-up needed.
+    const amount = opt.total_amount || 0;
+    if (amount > 0) return false;
 
     return true;
   });
@@ -401,8 +402,8 @@ async function pullOpenEstimates() {
     return {
       id: est.id,
       ageDays,
-      amount: opt.total_amount,
-      amountDisplay: formatRevenue(opt.total_amount),
+      amount: 0,
+      amountDisplay: "NO PRICE",
       customer: customerLastName(est),
       techName: overrideFirstName(techName).split(/\s+/)[0],
       description: (opt.name || est.estimate_number || "Estimate").slice(0, 50),
@@ -479,16 +480,16 @@ function buildHotList(crew, openEstimates, pastDueInvoices) {
     }
   }
 
-  // 2. Aging estimates (>14 days) — also high-priority, not rotated
+  // 2. Estimates missing pricing >2 days old — sales follow-up needed
   if (hot.length < 3) {
-    const oldEstimates = openEstimates.filter(e => e.ageDays >= 14);
+    const oldEstimates = openEstimates.filter(e => e.ageDays >= 2);
     // Sort by age desc — oldest first
     oldEstimates.sort((a, b) => b.ageDays - a.ageDays);
     for (const e of oldEstimates) {
       hot.push({
         severity: "medium",
         icon: "⚠️",
-        text: `${e.customer} — ${e.amountDisplay} estimate, ${e.ageDays} days old (${e.techName})`,
+        text: `${e.customer} — estimate from ${e.techName}, ${e.ageDays}d old, no price entered`,
       });
       if (hot.length >= 3) break;
     }
@@ -605,11 +606,9 @@ export async function buildOfficeData({ calendarId } = {}) {
     openEstimates: {
       list: openEstimates.slice(0, 8),
       totalCount: openEstimates.length,
-      totalValue: formatRevenue(totalOpenEstValue),
+      totalValue: `${openEstimates.length} ESTIMATES MISSING PRICING`,
       agedCount: openEstimates.filter(e => e.ageDays >= 7).length,
-      agedValue: formatRevenue(
-        openEstimates.filter(e => e.ageDays >= 7).reduce((s, e) => s + e.amount, 0)
-      ),
+      agedValue: "",
     },
     pastDueInvoices: {
       list: pastDueInvoices.slice(0, 8),
