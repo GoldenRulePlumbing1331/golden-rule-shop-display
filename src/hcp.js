@@ -68,6 +68,19 @@ export async function getEmployees({ pageSize = 100, page = 1 } = {}) {
     page,
   });
 }
+// Lists estimates within a date range.
+// HCP estimates are a separate entity from jobs — they live at /estimates.
+// The exact filter fields may differ from /jobs — we use created_min/max here
+// and verify response shape via diagnostic logging.
+export async function getEstimates({ startISO, endISO, pageSize = 100, page = 1 } = {}) {
+  return hcpFetch("/estimates", {
+    created_min: startISO,
+    created_max: endISO,
+    page_size: pageSize,
+    page,
+  });
+}
+
 // Simple connection test — just pulls a couple of jobs.
 export async function ping() {
   return hcpFetch("/jobs", { page_size: 1 });
