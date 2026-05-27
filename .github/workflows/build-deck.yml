@@ -2,9 +2,144 @@ name: Build deck
 
 on:
   schedule:
-    # Mon-Fri at 6 AM ET. Two cron entries to handle DST:
+    # Mon-Fri at 6 AM ET. Two cron entries to handle DST:name: Build deck
+
+on:
+  schedule:
+    # SHOP DECK MORNING REFRESH (existing) — Mon-Fri, redundant attempts:
+    # Targets 5:30 / 6:00 / 6:30 / 7:00 AM ET with DST coverage.
+    # Each entry is paired (EDT vs EST). Some UTC times collide and dedupe.
+    - cron: '30 9 * * 1-5'   # 5:30 AM EDT
+    - cron: '30 10 * * 1-5'  # 5:30 AM EST (and 6:30 AM EDT — collide, dedup)
+    - cron: '0 10 * * 1-5'   # 6:00 AM EDT
+    - cron: '0 11 * * 1-5'   # 6:00 AM EST (and 7:00 AM EDT — collide, dedup)
+    - cron: '30 11 * * 1-5'  # 6:30 AM EST
+    - cron: '0 12 * * 1-5'   # 7:00 AM EST
+
+    # OFFICE DISPLAY 30-MIN CADENCE — Mon-Fri, 8 AM–6 PM ET (business hours).
+    # Two cron entries per slot (EDT and EST) so the right one fires year-round.
+    # The build is idempotent, so the off-DST version harmlessly fires an hour off.
+    # 8:00 AM ET
+    - cron: '0 12 * * 1-5'   # 8:00 AM EDT (dedup with 7:00 AM EST above)
+    - cron: '0 13 * * 1-5'   # 8:00 AM EST
+    # 8:30 AM ET
+    - cron: '30 12 * * 1-5'  # 8:30 AM EDT
+    - cron: '30 13 * * 1-5'  # 8:30 AM EST
+    # 9:00 AM ET
+    - cron: '0 13 * * 1-5'   # 9:00 AM EDT (dedup with 8:00 AM EST)
+    - cron: '0 14 * * 1-5'   # 9:00 AM EST
+    # 9:30 AM ET
+    - cron: '30 13 * * 1-5'  # 9:30 AM EDT (dedup with 8:30 AM EST)
+    - cron: '30 14 * * 1-5'  # 9:30 AM EST
+    # 10:00 AM ET
+    - cron: '0 14 * * 1-5'   # 10:00 AM EDT (dedup with 9:00 AM EST)
+    - cron: '0 15 * * 1-5'   # 10:00 AM EST
+    # 10:30 AM ET
+    - cron: '30 14 * * 1-5'  # 10:30 AM EDT (dedup with 9:30 AM EST)
+    - cron: '30 15 * * 1-5'  # 10:30 AM EST
+    # 11:00 AM ET
+    - cron: '0 15 * * 1-5'   # 11:00 AM EDT (dedup with 10:00 AM EST)
+    - cron: '0 16 * * 1-5'   # 11:00 AM EST
+    # 11:30 AM ET
+    - cron: '30 15 * * 1-5'  # 11:30 AM EDT (dedup with 10:30 AM EST)
+    - cron: '30 16 * * 1-5'  # 11:30 AM EST
+    # 12:00 PM ET
+    - cron: '0 16 * * 1-5'   # 12:00 PM EDT (dedup with 11:00 AM EST)
+    - cron: '0 17 * * 1-5'   # 12:00 PM EST
+    # 12:30 PM ET
+    - cron: '30 16 * * 1-5'  # 12:30 PM EDT (dedup with 11:30 AM EST)
+    - cron: '30 17 * * 1-5'  # 12:30 PM EST
+    # 1:00 PM ET
+    - cron: '0 17 * * 1-5'   # 1:00 PM EDT (dedup with 12:00 PM EST)
+    - cron: '0 18 * * 1-5'   # 1:00 PM EST
+    # 1:30 PM ET
+    - cron: '30 17 * * 1-5'  # 1:30 PM EDT (dedup with 12:30 PM EST)
+    - cron: '30 18 * * 1-5'  # 1:30 PM EST
+    # 2:00 PM ET
+    - cron: '0 18 * * 1-5'   # 2:00 PM EDT (dedup with 1:00 PM EST)
+    - cron: '0 19 * * 1-5'   # 2:00 PM EST
+    # 2:30 PM ET
+    - cron: '30 18 * * 1-5'  # 2:30 PM EDT (dedup with 1:30 PM EST)
+    - cron: '30 19 * * 1-5'  # 2:30 PM EST
+    # 3:00 PM ET
+    - cron: '0 19 * * 1-5'   # 3:00 PM EDT (dedup with 2:00 PM EST)
+    - cron: '0 20 * * 1-5'   # 3:00 PM EST
+    # 3:30 PM ET
+    - cron: '30 19 * * 1-5'  # 3:30 PM EDT (dedup with 2:30 PM EST)
+    - cron: '30 20 * * 1-5'  # 3:30 PM EST
+    # 4:00 PM ET
+    - cron: '0 20 * * 1-5'   # 4:00 PM EDT (dedup with 3:00 PM EST)
+    - cron: '0 21 * * 1-5'   # 4:00 PM EST
+    # 4:30 PM ET
+    - cron: '30 20 * * 1-5'  # 4:30 PM EDT (dedup with 3:30 PM EST)
+    - cron: '30 21 * * 1-5'  # 4:30 PM EST
+    # 5:00 PM ET
+    - cron: '0 21 * * 1-5'   # 5:00 PM EDT (dedup with 4:00 PM EST)
+    - cron: '0 22 * * 1-5'   # 5:00 PM EST
+    # 5:30 PM ET
+    - cron: '30 21 * * 1-5'  # 5:30 PM EDT (dedup with 4:30 PM EST)
+    - cron: '30 22 * * 1-5'  # 5:30 PM EST
+    # 6:00 PM ET
+    - cron: '0 22 * * 1-5'   # 6:00 PM EDT (dedup with 5:00 PM EST)
+    - cron: '0 23 * * 1-5'   # 6:00 PM EST
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install
+      - name: Build shop deck (HTML + PPTX)
+        env:
+          HCP_API_KEY: ${{ secrets.HCP_API_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SHEET_ID: ${{ vars.GOOGLE_SHEET_ID }}
+          GOOGLE_CALENDAR_ID: ${{ vars.GOOGLE_CALENDAR_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run build-deck
+      - name: Build office display HTML
+        env:
+          HCP_API_KEY: ${{ secrets.HCP_API_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SHEET_ID: ${{ vars.GOOGLE_SHEET_ID }}
+          GOOGLE_CALENDAR_ID: ${{ vars.GOOGLE_CALENDAR_ID }}
+        run: npm run build-office
+      - name: Prepare Pages site directory
+        run: |
+          mkdir -p pages-site
+          cp output/GoldenRule_ShopBriefing_CURRENT.html pages-site/index.html
+          cp output/GoldenRule_ShopBriefing_CURRENT.html pages-site/shop-briefing.html
+          cp output/GoldenRule_OfficeDisplay_CURRENT.html pages-site/office.html
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
     # - 10:00 UTC = 6 AM ET during DST (March-November)
-    # - 11:00 UTC = 6 AM ET during EST (November-March)
+    # - 11:00 UTC = 6 AM ET during EST (November-March)                                                                                                                                                                                                                                           
     # One of the two will fire at the right time year-round; the other
     # runs an hour off and is harmless (it just rebuilds with the same data).
     - cron: '0 10 * * 1-5'
