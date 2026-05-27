@@ -329,11 +329,11 @@ function formatRevenue(amountCents) {
 // estimates that have been delivered to the customer, have a real dollar value,
 // and haven't been approved or rejected yet.
 async function pullOpenEstimates() {
-  // Window: last 30 days. Tighter than jobs because there are typically
-  // a LOT of estimates over a long window and we only care about open follow-ups.
+  // Window: last 45 days. Estimates older than that are unlikely to be
+  // closable — they're stale leads, not actionable follow-ups.
   const end = new Date();
   const start = new Date();
-  start.setUTCDate(start.getUTCDate() - 30);
+  start.setUTCDate(start.getUTCDate() - 45);
   start.setUTCHours(0, 0, 0, 0);
 
   // Paginate through /estimates (max 5 pages = 500 estimates — plenty for 30 days)
@@ -401,6 +401,7 @@ async function pullOpenEstimates() {
     const techName = (est.assigned_employees || [])[0]?.first_name || "";
     return {
       id: est.id,
+      estimateNumber: est.estimate_number || "",
       ageDays,
       amount: 0,
       amountDisplay: "NO PRICE",
