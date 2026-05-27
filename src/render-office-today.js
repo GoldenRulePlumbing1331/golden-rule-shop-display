@@ -490,8 +490,7 @@ function renderTodayGlance(todaySummary, openEstimates, pastDueInvoices) {
         <div class="glance-section">
           <div class="glance-section-title">PIPELINE</div>
           <div class="glance-stack">
-            <div class="glance-item"><span class="label">OPEN ESTIMATES</span><span class="value">${openEstimates.totalCount}</span></div>
-            <div class="glance-item"><span class="label">EST. VALUE</span><span class="value">${escapeHtml(openEstimates.totalValue)}</span></div>
+            <div class="glance-item"><span class="label">MISSING PRICING</span><span class="value">${openEstimates.totalCount}</span></div>
             <div class="glance-item"><span class="label">UNPAID INV.</span><span class="value">${pastDueInvoices.totalCount}</span></div>
             <div class="glance-item"><span class="label">UNPAID $</span><span class="value">${escapeHtml(pastDueInvoices.totalValue)}</span></div>
           </div>
