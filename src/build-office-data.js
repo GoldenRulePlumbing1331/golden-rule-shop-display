@@ -325,47 +325,87 @@ function formatRevenue(amountCents) {
 // Open estimates and past-due invoices
 // ---------------------------------------------------------------------------
 
+// Pull estimates from the /estimates endpoint and filter to "open" ones —
+// estimates that have been delivered to the customer, have a real dollar value,
+// and haven't been approved or rejected yet.
 async function pullOpenEstimates() {
-  // Pull jobs from the last 60 days that are estimate-type and not yet "won"
+  // Window: last 30 days. Tighter than jobs because there are typically
+  // a LOT of estimates over a long window and we only care about open follow-ups.
   const end = new Date();
   const start = new Date();
-  start.setUTCDate(start.getUTCDate() - 60);
+  start.setUTCDate(start.getUTCDate() - 30);
   start.setUTCHours(0, 0, 0, 0);
 
-  const allJobs = await pullJobsInRange(start.toISOString(), end.toISOString());
+  // Paginate through /estimates (max 5 pages = 500 estimates — plenty for 30 days)
+  const allEstimates = [];
+  let page = 1;
+  const MAX_PAGES = 5;
+  while (page <= MAX_PAGES) {
+    let resp;
+    try {
+      const { getEstimates } = await import("./hcp.js");
+      resp = await getEstimates({
+        startISO: start.toISOString(),
+        endISO: end.toISOString(),
+        pageSize: 100,
+        page,
+      });
+    } catch (e) {
+      console.warn(`[build-office-data] estimates page ${page} failed: ${e.message}`);
+      break;
+    }
+    const batch = resp?.estimates || [];
+    allEstimates.push(...batch);
+    const totalPages = resp?.total_pages || 1;
+    if (page >= totalPages) break;
+    page += 1;
+  }
+  console.log(`[build-office-data] pulled ${allEstimates.length} estimates from last 30 days`);
 
-  const estimates = allJobs.filter(j => {
-    const jobType = (j.job_fields?.job_type?.name || "").toLowerCase();
-    if (!jobType.includes("estimate")) return false;
-    // Not converted yet — we can't tell perfectly from one job object,
-    // but anything with a non-complete status is still pending
-    const status = j.work_status;
-    // We want estimates that have been GIVEN but not yet converted to a paid job
-    // For now, "open" = the estimate job is complete (delivered) but we have no follow-up
-    // This is an approximation — HCP doesn't expose estimate-to-job conversion directly
-    return COMPLETE_STATUSES.has(status);
+  // Statuses that mean the estimate has been delivered to the customer
+  const DELIVERED_STATUSES = new Set([
+    "complete unrated", "complete rated", "complete",
+  ]);
+
+  const openEstimates = allEstimates.filter(est => {
+    // Must have been delivered
+    if (!DELIVERED_STATUSES.has(est.work_status)) return false;
+
+    // Must have at least one option
+    const options = est.options || [];
+    if (options.length === 0) return false;
+
+    // Take the first option as canonical (most estimates have just one)
+    const opt = options[0];
+
+    // Must have a real dollar amount
+    const amount = opt.total_amount || 0;
+    if (amount <= 0) return false;
+
+    // Must not yet be approved or rejected
+    const approval = opt.approval_status;
+    if (approval === "approved" || approval === "rejected") return false;
+
+    return true;
   });
 
-  // Sort by created/scheduled date, oldest first (highest age)
-  estimates.sort((a, b) => {
-    const aDate = a.schedule?.scheduled_start || a.created_at || "";
-    const bDate = b.schedule?.scheduled_start || b.created_at || "";
-    return aDate.localeCompare(bDate);
-  });
+  // Sort by created_at ascending — oldest first (highest age)
+  openEstimates.sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
 
   const now = Date.now();
-  return estimates.map(j => {
-    const refDate = j.schedule?.scheduled_start || j.created_at;
+  return openEstimates.map(est => {
+    const opt = est.options[0];
+    const refDate = est.created_at;
     const ageDays = refDate ? Math.floor((now - new Date(refDate).getTime()) / 86400000) : 0;
-    const techName = (j.assigned_employees || [])[0]?.first_name || "";
+    const techName = (est.assigned_employees || [])[0]?.first_name || "";
     return {
-      id: j.id,
+      id: est.id,
       ageDays,
-      amount: j.total_amount || 0,
-      amountDisplay: formatRevenue(j.total_amount || 0),
-      customer: customerLastName(j),
+      amount: opt.total_amount,
+      amountDisplay: formatRevenue(opt.total_amount),
+      customer: customerLastName(est),
       techName: overrideFirstName(techName).split(/\s+/)[0],
-      description: (j.description || "Estimate").slice(0, 50),
+      description: (opt.name || est.estimate_number || "Estimate").slice(0, 50),
     };
   });
 }
