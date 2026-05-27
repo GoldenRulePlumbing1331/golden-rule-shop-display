@@ -410,10 +410,24 @@ async function pullPastDueInvoices() {
 // Hot list — what needs attention
 // ---------------------------------------------------------------------------
 
+// Seeded shuffle — deterministic for a given seed, so a single build is consistent
+// but the seed changes every 30 min, naturally rotating which items appear in HOT.
+function seededShuffle(array, seed) {
+  const result = [...array];
+  let s = seed;
+  for (let i = result.length - 1; i > 0; i--) {
+    // Simple linear congruential generator for repeatable randomness
+    s = (s * 9301 + 49297) % 233280;
+    const j = Math.floor((s / 233280) * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 function buildHotList(crew, openEstimates, pastDueInvoices) {
   const hot = [];
 
-  // 1. Late techs
+  // 1. Late techs — always first, never rotated (urgent and time-sensitive)
   for (const c of crew) {
     if (c.status.status === "late") {
       hot.push({
@@ -421,30 +435,41 @@ function buildHotList(crew, openEstimates, pastDueInvoices) {
         icon: "🔴",
         text: `${c.tech.display} is past scheduled start with no OMW — ${c.status.detail || "next customer"}`,
       });
-      if (hot.length >= 5) break;
+      if (hot.length >= 3) break;
     }
   }
 
-  // 2. Aging estimates (>14 days)
-  const oldEstimates = openEstimates.filter(e => e.ageDays >= 14);
-  for (const e of oldEstimates) {
-    hot.push({
-      severity: "medium",
-      icon: "⚠️",
-      text: `${e.customer} — ${e.amountDisplay} estimate, ${e.ageDays} days old (${e.techName})`,
-    });
-    if (hot.length >= 5) break;
+  // 2. Aging estimates (>14 days) — also high-priority, not rotated
+  if (hot.length < 3) {
+    const oldEstimates = openEstimates.filter(e => e.ageDays >= 14);
+    // Sort by age desc — oldest first
+    oldEstimates.sort((a, b) => b.ageDays - a.ageDays);
+    for (const e of oldEstimates) {
+      hot.push({
+        severity: "medium",
+        icon: "⚠️",
+        text: `${e.customer} — ${e.amountDisplay} estimate, ${e.ageDays} days old (${e.techName})`,
+      });
+      if (hot.length >= 3) break;
+    }
   }
 
-  // 3. Aging invoices (>21 days)
-  const oldInvoices = pastDueInvoices.filter(i => i.ageDays >= 21);
-  for (const i of oldInvoices) {
-    hot.push({
-      severity: "medium",
-      icon: "⚠️",
-      text: `${i.customer} — ${i.amountDisplay} unpaid, ${i.ageDays} days past due`,
-    });
-    if (hot.length >= 5) break;
+  // 3. Aging invoices (>21 days) — ROTATED. The seed is based on the current
+  // 30-minute window, so the rotation changes naturally throughout the day
+  // but stays stable within a single build's data.
+  if (hot.length < 3) {
+    const oldInvoices = pastDueInvoices.filter(i => i.ageDays >= 21);
+    // Seed: 30-min window number since epoch
+    const seed = Math.floor(Date.now() / (30 * 60 * 1000));
+    const shuffled = seededShuffle(oldInvoices, seed);
+    for (const i of shuffled) {
+      hot.push({
+        severity: "medium",
+        icon: "⚠️",
+        text: `${i.customer} — ${i.amountDisplay} unpaid, ${i.ageDays} days past due`,
+      });
+      if (hot.length >= 3) break;
+    }
   }
 
   return hot.slice(0, 3);
