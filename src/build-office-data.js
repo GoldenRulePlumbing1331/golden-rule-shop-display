@@ -192,7 +192,7 @@ function classifyTechStatus(tech, jobsToday, outOfOfficeNames, now) {
     return { status: "no_jobs", label: "NO JOBS TODAY", color: "🔘" };
   }
 
-  // Find current active job — started but not completed
+  // Currently on site — has started_at but no completed_at
   const activeJob = jobsToday.find(j => {
     const wt = j.work_timestamps || {};
     return wt.started_at && !wt.completed_at;
@@ -209,7 +209,7 @@ function classifyTechStatus(tech, jobsToday, outOfOfficeNames, now) {
     };
   }
 
-  // En route — OMW set but not started yet, on a current/upcoming job
+  // En route — OMW set but not started yet
   const enRouteJob = jobsToday.find(j => {
     const wt = j.work_timestamps || {};
     return wt.on_my_way_at && !wt.started_at && !wt.completed_at;
@@ -224,10 +224,9 @@ function classifyTechStatus(tech, jobsToday, outOfOfficeNames, now) {
     };
   }
 
-  // Late — has a scheduled job whose start time was >30 min ago, status still scheduled, no OMW
+  // Late — scheduled job whose start was >30 min ago, no OMW
   const lateJob = jobsToday.find(j => {
-    const status = j.work_status;
-    if (status !== "scheduled") return false;
+    if (j.work_status !== "scheduled") return false;
     const wt = j.work_timestamps || {};
     if (wt.on_my_way_at || wt.started_at) return false;
     const schedStart = j.schedule?.scheduled_start;
@@ -245,31 +244,36 @@ function classifyTechStatus(tech, jobsToday, outOfOfficeNames, now) {
     };
   }
 
-  // Check if all jobs today are completed
-  const allDone = jobsToday.every(j => COMPLETE_STATUSES.has(j.work_status));
-  if (allDone) {
-    return { status: "done", label: "DAY COMPLETE", color: "⚫" };
-  }
-
-  // Available — has more jobs today but nothing active right now
-  const nextJob = jobsToday.find(j => {
-    const status = j.work_status;
-    if (status !== "scheduled") return false;
-    const schedStart = j.schedule?.scheduled_start;
-    if (!schedStart) return false;
-    return new Date(schedStart).getTime() >= now.getTime();
+  // Partition: completed jobs vs upcoming jobs
+  const upcomingJobs = jobsToday.filter(j => {
+    return j.work_status === "scheduled" && !COMPLETE_STATUSES.has(j.work_status);
   });
-  if (nextJob) {
+
+  // If there are no upcoming jobs, all jobs are completed → DAY COMPLETE
+  if (upcomingJobs.length === 0) {
     return {
-      status: "available",
-      label: "AVAILABLE",
-      color: "⚪",
-      detail: customerLastName(nextJob),
-      etaTime: fmtTimeET(nextJob.schedule?.scheduled_start),
+      status: "done",
+      label: "DAY COMPLETE",
+      color: "⚫",
+      detail: `${jobsToday.length} job${jobsToday.length === 1 ? "" : "s"} complete`,
     };
   }
 
-  return { status: "idle", label: "AVAILABLE", color: "⚪" };
+  // There ARE upcoming jobs — show the next one (earliest by scheduled_start)
+  upcomingJobs.sort((a, b) => {
+    const aTime = a.schedule?.scheduled_start || "";
+    const bTime = b.schedule?.scheduled_start || "";
+    return aTime.localeCompare(bTime);
+  });
+  const nextJob = upcomingJobs[0];
+
+  return {
+    status: "available",
+    label: "AVAILABLE",
+    color: "⚪",
+    detail: customerLastName(nextJob),
+    etaTime: fmtTimeET(nextJob.schedule?.scheduled_start),
+  };
 }
 
 // ---------------------------------------------------------------------------
