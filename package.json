@@ -9,7 +9,8 @@
     "test-calendar": "node scripts/test-calendar.js",
     "test-tag-durations": "node scripts/test-tag-durations.js",
     "build-data-preview": "node scripts/build-data-preview.js",
-    "build-deck": "node scripts/build-deck.js"
+    "build-deck": "node scripts/build-deck.js",
+    "build-office": "node scripts/build-office.js"
   },
   "dependencies": {
     "googleapis": "^144.0.0",
