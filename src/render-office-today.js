@@ -82,14 +82,14 @@ function buildCSS() {
     .dashboard {
       max-width: 1920px;
       margin: 0 auto;
-      padding: 0.8vw;
+      padding: 0.4vw;
     }
 
     /* Top banner */
     .top-banner {
       background: ${COLORS.NAVY_DARK};
       color: ${COLORS.WHITE};
-      padding: 0.5vw 1.2vw;
+      padding: 0.35vw 1.2vw;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -177,7 +177,7 @@ function buildCSS() {
       border-bottom: none;
     }
     .crew-table td {
-      padding: 0.28vw 0.6vw;
+      padding: 0.18vw 0.6vw;
       font-size: 0.95vw;
       vertical-align: middle;
     }
