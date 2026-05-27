@@ -472,6 +472,21 @@ export async function buildOfficeData({ calendarId } = {}) {
   // Build crew status — one entry per tech in TIME_TRACKING_TECHS allowlist
   const now = nowET();
   const crew = [];
+
+  // DEBUG: log every job and its assigned employees, so we can see what HCP returns
+  console.log(`[build-office-data] DEBUG: ${todayJobs.length} jobs for today, breakdown of employee assignments:`);
+  for (const j of todayJobs) {
+    const employees = j.assigned_employees || [];
+    const empIds = employees.map(e => `${e.first_name || ""} ${e.last_name || ""}|${e.id}`).join(" + ");
+    const status = j.work_status || "?";
+    const sched = j.schedule?.scheduled_start ? j.schedule.scheduled_start.slice(11, 16) : "??:??";
+    console.log(`  ${sched} [${status}] ${(j.description || "no desc").slice(0, 40)} → ${empIds || "(unassigned)"}`);
+  }
+  console.log(`[build-office-data] DEBUG: matching against ${TIME_TRACKING_TECHS.length} techs in roster`);
+  for (const t of TIME_TRACKING_TECHS) {
+    console.log(`  ${t.display} → ${t.id}`);
+  }
+
   for (const tech of TIME_TRACKING_TECHS) {
     const techJobs = todayJobs.filter(j => {
       const employees = j.assigned_employees || [];
