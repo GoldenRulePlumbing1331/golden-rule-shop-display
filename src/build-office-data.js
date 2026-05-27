@@ -492,7 +492,14 @@ export async function buildOfficeData({ calendarId } = {}) {
       const employees = j.assigned_employees || [];
       return employees.some(e => e.id === tech.id);
     });
+    console.log(`[build-office-data] DEBUG match: ${tech.display} (${tech.id}) → matched ${techJobs.length} jobs`);
+    if (techJobs.length > 0) {
+      for (const j of techJobs) {
+        console.log(`  - ${j.work_status} @ ${j.schedule?.scheduled_start?.slice(11, 16)} ${(j.description || "").slice(0, 40)}`);
+      }
+    }
     const status = classifyTechStatus(tech, techJobs, ooOfficeNames, now);
+    console.log(`[build-office-data] DEBUG status: ${tech.display} → ${status.status} (${status.label})`);
     crew.push({
       tech: {
         id: tech.id,
