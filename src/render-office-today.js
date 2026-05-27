@@ -82,50 +82,50 @@ function buildCSS() {
     .dashboard {
       max-width: 1920px;
       margin: 0 auto;
-      padding: 1.5vw;
+      padding: 0.8vw;
     }
 
     /* Top banner */
     .top-banner {
       background: ${COLORS.NAVY_DARK};
       color: ${COLORS.WHITE};
-      padding: 1vw 1.5vw;
+      padding: 0.5vw 1.2vw;
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: relative;
-      margin-bottom: 1vw;
+      margin-bottom: 0.6vw;
     }
     .top-banner::before {
       content: "";
       position: absolute;
       left: 0; top: 0; bottom: 0;
-      width: 6px;
+      width: 5px;
       background: ${COLORS.YELLOW};
     }
     .top-banner .title {
       font-family: 'Arial Black', sans-serif;
-      font-size: 2vw;
+      font-size: 1.6vw;
       font-weight: 900;
       letter-spacing: 0.05em;
     }
     .top-banner .meta {
       text-align: right;
-      font-size: 1.1vw;
+      font-size: 0.9vw;
       color: ${COLORS.STEEL_LIGHT};
       font-weight: bold;
       letter-spacing: 0.06em;
     }
     .top-banner .meta .date {
       color: ${COLORS.YELLOW};
-      font-size: 1.3vw;
+      font-size: 1.1vw;
     }
 
     /* Layout grid */
     .row {
       display: grid;
-      gap: 1vw;
-      margin-bottom: 1vw;
+      gap: 0.6vw;
+      margin-bottom: 0.6vw;
     }
     .row.top {
       grid-template-columns: 2.5fr 1fr;
@@ -147,9 +147,9 @@ function buildCSS() {
     .card-header {
       background: ${COLORS.NAVY};
       color: ${COLORS.WHITE};
-      padding: 0.7vw 1vw;
+      padding: 0.45vw 0.9vw;
       font-family: 'Arial Black', sans-serif;
-      font-size: 1.1vw;
+      font-size: 1vw;
       font-weight: 900;
       letter-spacing: 0.1em;
       display: flex;
@@ -158,11 +158,11 @@ function buildCSS() {
     }
     .card-header .sub {
       color: ${COLORS.YELLOW};
-      font-size: 0.85vw;
+      font-size: 0.75vw;
       letter-spacing: 0.12em;
     }
     .card-body {
-      padding: 0.9vw 1.1vw;
+      padding: 0.6vw 0.8vw;
     }
 
     /* Crew status table */
@@ -177,41 +177,41 @@ function buildCSS() {
       border-bottom: none;
     }
     .crew-table td {
-      padding: 0.45vw 0.6vw;
-      font-size: 1vw;
+      padding: 0.28vw 0.6vw;
+      font-size: 0.95vw;
       vertical-align: middle;
     }
     .crew-table .name {
       font-family: 'Arial Black', sans-serif;
       color: ${COLORS.NAVY_DARK};
       font-weight: 900;
-      font-size: 1.05vw;
-      width: 18%;
+      font-size: 1vw;
+      width: 16%;
     }
     .crew-table .badge-cell {
       width: 22%;
     }
     .crew-table .detail-cell {
       color: ${COLORS.GRAY_TEXT};
-      font-size: 0.95vw;
+      font-size: 0.9vw;
     }
     .crew-table .time-cell {
       width: 18%;
       text-align: right;
       color: ${COLORS.GRAY_MUTED};
-      font-size: 0.9vw;
+      font-size: 0.85vw;
       font-weight: bold;
     }
 
     .badge {
       display: inline-block;
-      padding: 0.2vw 0.7vw;
+      padding: 0.15vw 0.6vw;
       font-family: 'Arial Black', sans-serif;
-      font-size: 0.85vw;
+      font-size: 0.8vw;
       font-weight: 900;
       letter-spacing: 0.1em;
       border-radius: 0.2vw;
-      min-width: 7vw;
+      min-width: 6.5vw;
       text-align: center;
     }
     .badge.on-site { background: ${COLORS.GREEN_SOFT}; color: ${COLORS.GREEN_OK}; }
@@ -223,36 +223,9 @@ function buildCSS() {
     .badge.no-jobs { background: ${COLORS.STEEL_LIGHT}; color: ${COLORS.GRAY_MUTED}; }
     .badge.out { background: ${COLORS.RED_ALERT}; color: ${COLORS.WHITE}; }
 
-    /* Today at a glance */
-    .glance-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.6vw 1.2vw;
-    }
-    .glance-item {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      padding: 0.3vw 0;
-      border-bottom: 1px solid ${COLORS.GRAY_LINE};
-    }
-    .glance-item:last-child {
-      border-bottom: none;
-    }
-    .glance-item .label {
-      color: ${COLORS.GRAY_TEXT};
-      font-size: 0.95vw;
-      font-weight: bold;
-      letter-spacing: 0.06em;
-    }
-    .glance-item .value {
-      font-family: 'Arial Black', sans-serif;
-      color: ${COLORS.NAVY_DARK};
-      font-size: 1.6vw;
-      font-weight: 900;
-    }
+    /* Today at a glance — single column, no wrapping */
     .glance-section {
-      margin-bottom: 0.8vw;
+      margin-bottom: 0.5vw;
     }
     .glance-section:last-child {
       margin-bottom: 0;
@@ -260,11 +233,45 @@ function buildCSS() {
     .glance-section-title {
       font-family: 'Arial Black', sans-serif;
       color: ${COLORS.NAVY};
-      font-size: 0.9vw;
+      font-size: 0.8vw;
       letter-spacing: 0.14em;
-      margin-bottom: 0.3vw;
-      padding-bottom: 0.3vw;
+      margin-bottom: 0.25vw;
+      padding-bottom: 0.2vw;
       border-bottom: 2px solid ${COLORS.YELLOW};
+    }
+    .glance-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.15vw 1vw;
+    }
+    .glance-item {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 0.2vw 0;
+      border-bottom: 1px solid ${COLORS.GRAY_LINE};
+    }
+    .glance-item:last-child {
+      border-bottom: none;
+    }
+    .glance-item .label {
+      color: ${COLORS.GRAY_TEXT};
+      font-size: 0.8vw;
+      font-weight: bold;
+      letter-spacing: 0.06em;
+    }
+    .glance-item .value {
+      font-family: 'Arial Black', sans-serif;
+      color: ${COLORS.NAVY_DARK};
+      font-size: 1.3vw;
+      font-weight: 900;
+    }
+    /* Pipeline items get a single column so $ values don't wrap */
+    .glance-stack .glance-item {
+      padding: 0.25vw 0;
+    }
+    .glance-stack .glance-item .value {
+      font-size: 1.2vw;
     }
 
     /* List tables (estimates and invoices) */
@@ -285,8 +292,8 @@ function buildCSS() {
       background: ${COLORS.RED_SOFT};
     }
     .list-table td {
-      padding: 0.4vw 0.6vw;
-      font-size: 0.95vw;
+      padding: 0.25vw 0.6vw;
+      font-size: 0.9vw;
     }
     .list-table .age {
       font-family: 'Arial Black', sans-serif;
@@ -314,7 +321,7 @@ function buildCSS() {
     }
     .list-table .tech-tag {
       color: ${COLORS.GRAY_MUTED};
-      font-size: 0.85vw;
+      font-size: 0.8vw;
       font-weight: bold;
       letter-spacing: 0.08em;
       width: 14%;
@@ -323,9 +330,9 @@ function buildCSS() {
     .list-footer {
       background: ${COLORS.NAVY_DARK};
       color: ${COLORS.YELLOW};
-      padding: 0.55vw 1vw;
+      padding: 0.4vw 0.9vw;
       font-family: 'Arial Black', sans-serif;
-      font-size: 1vw;
+      font-size: 0.85vw;
       font-weight: 900;
       letter-spacing: 0.1em;
       text-align: center;
@@ -335,11 +342,11 @@ function buildCSS() {
     }
 
     .empty-state {
-      padding: 1.5vw;
+      padding: 1vw;
       text-align: center;
       color: ${COLORS.GRAY_MUTED};
       font-style: italic;
-      font-size: 1vw;
+      font-size: 0.9vw;
     }
 
     /* Hot list */
@@ -351,16 +358,19 @@ function buildCSS() {
       background: ${COLORS.NAVY_DARK};
     }
     .hot-list {
-      padding: 0.5vw;
+      padding: 0.3vw;
+      display: flex;
+      gap: 0.4vw;
     }
     .hot-item {
+      flex: 1;
       display: flex;
       align-items: center;
-      gap: 0.8vw;
-      padding: 0.7vw 1vw;
+      gap: 0.6vw;
+      padding: 0.5vw 0.8vw;
       background: ${COLORS.WHITE};
-      margin: 0.4vw;
-      border-left: 6px solid;
+      border-left: 5px solid;
+      min-height: 2.4vw;
     }
     .hot-item.high {
       border-left-color: ${COLORS.RED_ALERT};
@@ -369,31 +379,33 @@ function buildCSS() {
       border-left-color: ${COLORS.AMBER};
     }
     .hot-item .icon {
-      font-size: 1.6vw;
+      font-size: 1.3vw;
       flex-shrink: 0;
     }
     .hot-item .text {
       flex: 1;
       font-family: 'Arial Black', sans-serif;
       color: ${COLORS.NAVY_DARK};
-      font-size: 1.1vw;
+      font-size: 0.95vw;
       font-weight: 900;
+      line-height: 1.25;
     }
     .hot-empty {
-      padding: 1vw;
+      flex: 1;
+      padding: 0.6vw;
       text-align: center;
       color: ${COLORS.NAVY_DARK};
       font-style: italic;
-      font-size: 1.05vw;
+      font-size: 0.95vw;
       font-weight: bold;
     }
 
     /* Footer */
     .page-footer {
       text-align: center;
-      padding: 0.8vw;
+      padding: 0.4vw;
       color: ${COLORS.GRAY_MUTED};
-      font-size: 0.85vw;
+      font-size: 0.75vw;
       letter-spacing: 0.08em;
       font-weight: bold;
     }
@@ -477,11 +489,11 @@ function renderTodayGlance(todaySummary, openEstimates, pastDueInvoices) {
         </div>
         <div class="glance-section">
           <div class="glance-section-title">PIPELINE</div>
-          <div class="glance-grid">
+          <div class="glance-stack">
             <div class="glance-item"><span class="label">OPEN ESTIMATES</span><span class="value">${openEstimates.totalCount}</span></div>
-            <div class="glance-item"><span class="label">EST. VALUE</span><span class="value" style="font-size: 1.2vw;">${escapeHtml(openEstimates.totalValue)}</span></div>
+            <div class="glance-item"><span class="label">EST. VALUE</span><span class="value">${escapeHtml(openEstimates.totalValue)}</span></div>
             <div class="glance-item"><span class="label">UNPAID INV.</span><span class="value">${pastDueInvoices.totalCount}</span></div>
-            <div class="glance-item"><span class="label">UNPAID $</span><span class="value" style="font-size: 1.2vw;">${escapeHtml(pastDueInvoices.totalValue)}</span></div>
+            <div class="glance-item"><span class="label">UNPAID $</span><span class="value">${escapeHtml(pastDueInvoices.totalValue)}</span></div>
           </div>
         </div>
       </div>
