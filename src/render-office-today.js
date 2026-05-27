@@ -302,6 +302,14 @@ function buildCSS() {
       width: 14%;
       text-align: right;
     }
+    .list-table .est-num {
+      font-family: 'Arial Black', sans-serif;
+      color: ${COLORS.STEEL};
+      font-weight: 900;
+      width: 12%;
+      font-size: 0.85vw;
+      letter-spacing: 0.02em;
+    }
     .list-table .age.warning {
       color: ${COLORS.AMBER};
     }
@@ -312,7 +320,7 @@ function buildCSS() {
       font-family: 'Arial Black', sans-serif;
       color: ${COLORS.NAVY_DARK};
       font-weight: 900;
-      width: 18%;
+      width: 16%;
       text-align: right;
     }
     .list-table .customer {
@@ -490,9 +498,9 @@ function renderTodayGlance(todaySummary, openEstimates, pastDueInvoices) {
         <div class="glance-section">
           <div class="glance-section-title">PIPELINE</div>
           <div class="glance-stack">
-            <div class="glance-item"><span class="label">MISSING PRICING</span><span class="value">${openEstimates.totalCount}</span></div>
+            <div class="glance-item"><span class="label">EST. MISSING $</span><span class="value">${openEstimates.totalCount}</span></div>
             <div class="glance-item"><span class="label">UNPAID INV.</span><span class="value">${pastDueInvoices.totalCount}</span></div>
-            <div class="glance-item"><span class="label">UNPAID $</span><span class="value">${escapeHtml(pastDueInvoices.totalValue)}</span></div>
+            <div class="glance-item"><span class="label">UNPAID TOTAL</span><span class="value">${escapeHtml(pastDueInvoices.totalValue)}</span></div>
           </div>
         </div>
       </div>
@@ -527,9 +535,11 @@ function renderOpenEstimates(openEstimates) {
   const rows = sorted.map(e => {
     const rowCls = ageRowClass(e.ageDays);
     const ageCls = ageClass(e.ageDays);
+    const estNum = e.estimateNumber ? `#${e.estimateNumber}` : "";
     return `
       <tr class="${rowCls}">
         <td class="age ${ageCls}">${e.ageDays}d</td>
+        <td class="est-num">${escapeHtml(estNum)}</td>
         <td class="amount">${escapeHtml(e.amountDisplay)}</td>
         <td class="customer">${escapeHtml(e.customer)}</td>
         <td class="tech-tag">${escapeHtml(e.techName || "")}</td>
