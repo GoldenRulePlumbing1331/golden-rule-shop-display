@@ -336,10 +336,12 @@ async function pullOpenEstimates() {
   start.setUTCDate(start.getUTCDate() - 45);
   start.setUTCHours(0, 0, 0, 0);
 
-  // Paginate through /estimates (max 5 pages = 500 estimates — plenty for 30 days)
+  // Paginate through /estimates. HCP's server-side date filter doesn't appear
+  // to apply here, so we may need to walk many pages to find recent estimates.
+  // Cap at 20 pages × 100/page = 2000 estimates max, then filter client-side.
   const allEstimates = [];
   let page = 1;
-  const MAX_PAGES = 5;
+  const MAX_PAGES = 20;
   while (page <= MAX_PAGES) {
     let resp;
     try {
@@ -360,14 +362,36 @@ async function pullOpenEstimates() {
     if (page >= totalPages) break;
     page += 1;
   }
-  console.log(`[build-office-data] pulled ${allEstimates.length} estimates from last 30 days`);
+  console.log(`[build-office-data] pulled ${allEstimates.length} estimates total (raw, before filters)`);
 
+  // Diagnostic — what's the age distribution of what we pulled?
+  if (allEstimates.length > 0) {
+    const now = Date.now();
+    const ages = allEstimates
+      .map(e => e.created_at ? Math.floor((now - new Date(e.created_at).getTime()) / 86400000) : -1)
+      .filter(a => a >= 0);
+    const oldest = Math.max(...ages);
+    const newest = Math.min(...ages);
+    const within45 = ages.filter(a => a <= 45).length;
+    console.log(`[build-office-data] estimate ages: newest=${newest}d, oldest=${oldest}d, within 45 days=${within45}`);
+  }
   // Statuses that mean the estimate has been delivered to the customer
   const DELIVERED_STATUSES = new Set([
     "complete unrated", "complete rated", "complete",
   ]);
 
+  // Hard age cap — only consider estimates created in the last 45 days.
+  // We do this client-side because HCP's server-side date filter
+  // doesn't appear to be honored on the /estimates endpoint.
+  const fortyFiveDaysAgo = new Date();
+  fortyFiveDaysAgo.setUTCDate(fortyFiveDaysAgo.getUTCDate() - 45);
+
   const openEstimates = allEstimates.filter(est => {
+    // Age cap — must be created within the last 45 days
+    const createdAt = est.created_at;
+    if (!createdAt) return false;
+    if (new Date(createdAt) < fortyFiveDaysAgo) return false;
+
     // Must have been delivered (tech went to the customer)
     if (!DELIVERED_STATUSES.has(est.work_status)) return false;
 
