@@ -375,10 +375,7 @@ async function pullOpenEstimates() {
     const within45 = ages.filter(a => a <= 45).length;
     console.log(`[build-office-data] estimate ages: newest=${newest}d, oldest=${oldest}d, within 45 days=${within45}`);
   }
-  // Statuses that mean the estimate has been delivered to the customer
-  const DELIVERED_STATUSES = new Set([
-    "complete unrated", "complete rated", "complete",
-  ]);
+
 
   // Hard age cap — only consider estimates created in the last 45 days.
   // We do this client-side because HCP's server-side date filter
@@ -386,14 +383,19 @@ async function pullOpenEstimates() {
   const fortyFiveDaysAgo = new Date();
   fortyFiveDaysAgo.setUTCDate(fortyFiveDaysAgo.getUTCDate() - 45);
 
+  // Statuses we EXCLUDE because they mean the estimate is closed/done
+  const CLOSED_STATUSES = new Set([
+    "user canceled", "pro canceled", "canceled", "deleted",
+  ]);
+
   const openEstimates = allEstimates.filter(est => {
     // Age cap — must be created within the last 45 days
     const createdAt = est.created_at;
     if (!createdAt) return false;
     if (new Date(createdAt) < fortyFiveDaysAgo) return false;
 
-    // Must have been delivered (tech went to the customer)
-    if (!DELIVERED_STATUSES.has(est.work_status)) return false;
+    // Exclude canceled/deleted estimates
+    if (CLOSED_STATUSES.has(est.work_status)) return false;
 
     // Must have at least one option
     const options = est.options || [];
@@ -406,8 +408,9 @@ async function pullOpenEstimates() {
     const approval = opt.approval_status;
     if (approval === "approved" || approval === "rejected") return false;
 
-    // ONLY show estimates with $0 total — these are the ones missing pricing,
-    // where a tech delivered but no line items were entered. Sales/ops follow-up needed.
+    // ONLY show estimates with $0 total — these are the ones missing pricing.
+    // Covers all stages: not yet scheduled, scheduled, in progress, delivered.
+    // Any $0 estimate sitting in HCP needs attention from someone.
     const amount = opt.total_amount || 0;
     if (amount > 0) return false;
 
