@@ -625,7 +625,8 @@ function renderHotList(hotList) {
 
 export function renderOfficeToday(data) {
   const now = new Date();
-  const refreshSec = REFRESH_MS / 1000;
+  const refreshMs = REFRESH_MS;
+  const refreshMin = Math.round(refreshMs / 60000);
   const generatedAt = new Date(data.generatedAt);
 
   return `<!DOCTYPE html>
@@ -633,8 +634,28 @@ export function renderOfficeToday(data) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="refresh" content="${refreshSec}">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Golden Rule — Office Display</title>
+  <script>
+    // Force a hard reload every ${refreshMin} minutes with a cache-busting query param.
+    // Amazon Silk and other TV browsers cache HTML aggressively and ignore meta-refresh,
+    // so we manually navigate to a unique URL on every cycle.
+    (function() {
+      setTimeout(function() {
+        try {
+          var url = new URL(window.location.href);
+          url.searchParams.set('_t', Date.now());
+          window.location.replace(url.toString());
+        } catch (e) {
+          // Fallback for older browsers that lack URL constructor support
+          var sep = window.location.href.indexOf('?') === -1 ? '?' : '&';
+          window.location.replace(window.location.href.split('?')[0] + sep + '_t=' + Date.now());
+        }
+      }, ${refreshMs});
+    })();
+  </script>
   <style>${buildCSS()}</style>
 </head>
 <body>
@@ -643,7 +664,7 @@ export function renderOfficeToday(data) {
       <div class="title">OFFICE DASHBOARD — TODAY</div>
       <div class="meta">
         <div class="date">${escapeHtml(fmtFullDate(now))}</div>
-        <div>UPDATED ${escapeHtml(fmtTime(generatedAt))} ET  ·  AUTO-REFRESH 5 MIN</div>
+        <div>UPDATED ${escapeHtml(fmtTime(generatedAt))} ET  ·  AUTO-REFRESH ${refreshMin} MIN</div>
       </div>
     </div>
 
