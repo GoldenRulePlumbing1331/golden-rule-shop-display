@@ -421,6 +421,16 @@ async function pullOpenEstimates() {
   openEstimates.sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
 
   const now = Date.now();
+  // Diagnostic — print each open estimate's date fields so we can verify which is accurate
+  console.log("[build-office-data] open estimates date check (created_at vs updated_at):");
+  for (const est of openEstimates.slice(0, 16)) {
+    const createdAt = est.created_at;
+    const updatedAt = est.updated_at;
+    const createdAge = createdAt ? Math.floor((now - new Date(createdAt).getTime()) / 86400000) : "?";
+    const updatedAge = updatedAt ? Math.floor((now - new Date(updatedAt).getTime()) / 86400000) : "?";
+    console.log(`  #${est.estimate_number} ${customerLastName(est).padEnd(20)} created=${(createdAt || "?").slice(0, 10)} (${createdAge}d) updated=${(updatedAt || "?").slice(0, 10)} (${updatedAge}d)`);
+  }
+
   return openEstimates.map(est => {
     const opt = est.options[0];
     const refDate = est.created_at;
