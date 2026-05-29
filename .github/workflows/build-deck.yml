@@ -12,69 +12,200 @@ on:
     - cron: '30 11 * * 1-5'  # 6:30 AM EST
     - cron: '0 12 * * 1-5'   # 7:00 AM EST
 
-    # OFFICE DISPLAY 30-MIN CADENCE — Mon-Fri, 8 AM–6 PM ET (business hours).
+    # OFFICE DISPLAY 10-MIN CADENCE — Mon-Fri, 8 AM–6 PM ET (business hours).
+    # Every 10 min: :00, :10, :20, :30, :40, :50 past each hour.
     # Two cron entries per slot (EDT and EST) so the right one fires year-round.
-    # The build is idempotent, so the off-DST version harmlessly fires an hour off.
+
     # 8:00 AM ET
     - cron: '0 12 * * 1-5'   # 8:00 AM EDT (dedup with 7:00 AM EST above)
     - cron: '0 13 * * 1-5'   # 8:00 AM EST
+    # 8:10 AM ET
+    - cron: '10 12 * * 1-5'  # 8:10 AM EDT
+    - cron: '10 13 * * 1-5'  # 8:10 AM EST
+    # 8:20 AM ET
+    - cron: '20 12 * * 1-5'  # 8:20 AM EDT
+    - cron: '20 13 * * 1-5'  # 8:20 AM EST
     # 8:30 AM ET
     - cron: '30 12 * * 1-5'  # 8:30 AM EDT
     - cron: '30 13 * * 1-5'  # 8:30 AM EST
+    # 8:40 AM ET
+    - cron: '40 12 * * 1-5'  # 8:40 AM EDT
+    - cron: '40 13 * * 1-5'  # 8:40 AM EST
+    # 8:50 AM ET
+    - cron: '50 12 * * 1-5'  # 8:50 AM EDT
+    - cron: '50 13 * * 1-5'  # 8:50 AM EST
+
     # 9:00 AM ET
     - cron: '0 13 * * 1-5'   # 9:00 AM EDT (dedup with 8:00 AM EST)
     - cron: '0 14 * * 1-5'   # 9:00 AM EST
+    # 9:10 AM ET
+    - cron: '10 13 * * 1-5'  # 9:10 AM EDT (dedup with 8:10 AM EST)
+    - cron: '10 14 * * 1-5'  # 9:10 AM EST
+    # 9:20 AM ET
+    - cron: '20 13 * * 1-5'  # 9:20 AM EDT (dedup with 8:20 AM EST)
+    - cron: '20 14 * * 1-5'  # 9:20 AM EST
     # 9:30 AM ET
     - cron: '30 13 * * 1-5'  # 9:30 AM EDT (dedup with 8:30 AM EST)
     - cron: '30 14 * * 1-5'  # 9:30 AM EST
+    # 9:40 AM ET
+    - cron: '40 13 * * 1-5'  # 9:40 AM EDT (dedup with 8:40 AM EST)
+    - cron: '40 14 * * 1-5'  # 9:40 AM EST
+    # 9:50 AM ET
+    - cron: '50 13 * * 1-5'  # 9:50 AM EDT (dedup with 8:50 AM EST)
+    - cron: '50 14 * * 1-5'  # 9:50 AM EST
+
     # 10:00 AM ET
     - cron: '0 14 * * 1-5'   # 10:00 AM EDT (dedup with 9:00 AM EST)
     - cron: '0 15 * * 1-5'   # 10:00 AM EST
+    # 10:10 AM ET
+    - cron: '10 14 * * 1-5'  # 10:10 AM EDT (dedup with 9:10 AM EST)
+    - cron: '10 15 * * 1-5'  # 10:10 AM EST
+    # 10:20 AM ET
+    - cron: '20 14 * * 1-5'  # 10:20 AM EDT (dedup with 9:20 AM EST)
+    - cron: '20 15 * * 1-5'  # 10:20 AM EST
     # 10:30 AM ET
     - cron: '30 14 * * 1-5'  # 10:30 AM EDT (dedup with 9:30 AM EST)
     - cron: '30 15 * * 1-5'  # 10:30 AM EST
+    # 10:40 AM ET
+    - cron: '40 14 * * 1-5'  # 10:40 AM EDT (dedup with 9:40 AM EST)
+    - cron: '40 15 * * 1-5'  # 10:40 AM EST
+    # 10:50 AM ET
+    - cron: '50 14 * * 1-5'  # 10:50 AM EDT (dedup with 9:50 AM EST)
+    - cron: '50 15 * * 1-5'  # 10:50 AM EST
+
     # 11:00 AM ET
     - cron: '0 15 * * 1-5'   # 11:00 AM EDT (dedup with 10:00 AM EST)
     - cron: '0 16 * * 1-5'   # 11:00 AM EST
+    # 11:10 AM ET
+    - cron: '10 15 * * 1-5'  # 11:10 AM EDT (dedup with 10:10 AM EST)
+    - cron: '10 16 * * 1-5'  # 11:10 AM EST
+    # 11:20 AM ET
+    - cron: '20 15 * * 1-5'  # 11:20 AM EDT (dedup with 10:20 AM EST)
+    - cron: '20 16 * * 1-5'  # 11:20 AM EST
     # 11:30 AM ET
     - cron: '30 15 * * 1-5'  # 11:30 AM EDT (dedup with 10:30 AM EST)
     - cron: '30 16 * * 1-5'  # 11:30 AM EST
+    # 11:40 AM ET
+    - cron: '40 15 * * 1-5'  # 11:40 AM EDT (dedup with 10:40 AM EST)
+    - cron: '40 16 * * 1-5'  # 11:40 AM EST
+    # 11:50 AM ET
+    - cron: '50 15 * * 1-5'  # 11:50 AM EDT (dedup with 10:50 AM EST)
+    - cron: '50 16 * * 1-5'  # 11:50 AM EST
+
     # 12:00 PM ET
     - cron: '0 16 * * 1-5'   # 12:00 PM EDT (dedup with 11:00 AM EST)
     - cron: '0 17 * * 1-5'   # 12:00 PM EST
+    # 12:10 PM ET
+    - cron: '10 16 * * 1-5'  # 12:10 PM EDT (dedup with 11:10 AM EST)
+    - cron: '10 17 * * 1-5'  # 12:10 PM EST
+    # 12:20 PM ET
+    - cron: '20 16 * * 1-5'  # 12:20 PM EDT (dedup with 11:20 AM EST)
+    - cron: '20 17 * * 1-5'  # 12:20 PM EST
     # 12:30 PM ET
     - cron: '30 16 * * 1-5'  # 12:30 PM EDT (dedup with 11:30 AM EST)
     - cron: '30 17 * * 1-5'  # 12:30 PM EST
+    # 12:40 PM ET
+    - cron: '40 16 * * 1-5'  # 12:40 PM EDT (dedup with 11:40 AM EST)
+    - cron: '40 17 * * 1-5'  # 12:40 PM EST
+    # 12:50 PM ET
+    - cron: '50 16 * * 1-5'  # 12:50 PM EDT (dedup with 11:50 AM EST)
+    - cron: '50 17 * * 1-5'  # 12:50 PM EST
+
     # 1:00 PM ET
     - cron: '0 17 * * 1-5'   # 1:00 PM EDT (dedup with 12:00 PM EST)
     - cron: '0 18 * * 1-5'   # 1:00 PM EST
+    # 1:10 PM ET
+    - cron: '10 17 * * 1-5'  # 1:10 PM EDT (dedup with 12:10 PM EST)
+    - cron: '10 18 * * 1-5'  # 1:10 PM EST
+    # 1:20 PM ET
+    - cron: '20 17 * * 1-5'  # 1:20 PM EDT (dedup with 12:20 PM EST)
+    - cron: '20 18 * * 1-5'  # 1:20 PM EST
     # 1:30 PM ET
     - cron: '30 17 * * 1-5'  # 1:30 PM EDT (dedup with 12:30 PM EST)
     - cron: '30 18 * * 1-5'  # 1:30 PM EST
+    # 1:40 PM ET
+    - cron: '40 17 * * 1-5'  # 1:40 PM EDT (dedup with 12:40 PM EST)
+    - cron: '40 18 * * 1-5'  # 1:40 PM EST
+    # 1:50 PM ET
+    - cron: '50 17 * * 1-5'  # 1:50 PM EDT (dedup with 12:50 PM EST)
+    - cron: '50 18 * * 1-5'  # 1:50 PM EST
+
     # 2:00 PM ET
     - cron: '0 18 * * 1-5'   # 2:00 PM EDT (dedup with 1:00 PM EST)
     - cron: '0 19 * * 1-5'   # 2:00 PM EST
+    # 2:10 PM ET
+    - cron: '10 18 * * 1-5'  # 2:10 PM EDT (dedup with 1:10 PM EST)
+    - cron: '10 19 * * 1-5'  # 2:10 PM EST
+    # 2:20 PM ET
+    - cron: '20 18 * * 1-5'  # 2:20 PM EDT (dedup with 1:20 PM EST)
+    - cron: '20 19 * * 1-5'  # 2:20 PM EST
     # 2:30 PM ET
     - cron: '30 18 * * 1-5'  # 2:30 PM EDT (dedup with 1:30 PM EST)
     - cron: '30 19 * * 1-5'  # 2:30 PM EST
+    # 2:40 PM ET
+    - cron: '40 18 * * 1-5'  # 2:40 PM EDT (dedup with 1:40 PM EST)
+    - cron: '40 19 * * 1-5'  # 2:40 PM EST
+    # 2:50 PM ET
+    - cron: '50 18 * * 1-5'  # 2:50 PM EDT (dedup with 1:50 PM EST)
+    - cron: '50 19 * * 1-5'  # 2:50 PM EST
+
     # 3:00 PM ET
     - cron: '0 19 * * 1-5'   # 3:00 PM EDT (dedup with 2:00 PM EST)
     - cron: '0 20 * * 1-5'   # 3:00 PM EST
+    # 3:10 PM ET
+    - cron: '10 19 * * 1-5'  # 3:10 PM EDT (dedup with 2:10 PM EST)
+    - cron: '10 20 * * 1-5'  # 3:10 PM EST
+    # 3:20 PM ET
+    - cron: '20 19 * * 1-5'  # 3:20 PM EDT (dedup with 2:20 PM EST)
+    - cron: '20 20 * * 1-5'  # 3:20 PM EST
     # 3:30 PM ET
     - cron: '30 19 * * 1-5'  # 3:30 PM EDT (dedup with 2:30 PM EST)
     - cron: '30 20 * * 1-5'  # 3:30 PM EST
+    # 3:40 PM ET
+    - cron: '40 19 * * 1-5'  # 3:40 PM EDT (dedup with 2:40 PM EST)
+    - cron: '40 20 * * 1-5'  # 3:40 PM EST
+    # 3:50 PM ET
+    - cron: '50 19 * * 1-5'  # 3:50 PM EDT (dedup with 2:50 PM EST)
+    - cron: '50 20 * * 1-5'  # 3:50 PM EST
+
     # 4:00 PM ET
     - cron: '0 20 * * 1-5'   # 4:00 PM EDT (dedup with 3:00 PM EST)
     - cron: '0 21 * * 1-5'   # 4:00 PM EST
+    # 4:10 PM ET
+    - cron: '10 20 * * 1-5'  # 4:10 PM EDT (dedup with 3:10 PM EST)
+    - cron: '10 21 * * 1-5'  # 4:10 PM EST
+    # 4:20 PM ET
+    - cron: '20 20 * * 1-5'  # 4:20 PM EDT (dedup with 3:20 PM EST)
+    - cron: '20 21 * * 1-5'  # 4:20 PM EST
     # 4:30 PM ET
     - cron: '30 20 * * 1-5'  # 4:30 PM EDT (dedup with 3:30 PM EST)
     - cron: '30 21 * * 1-5'  # 4:30 PM EST
+    # 4:40 PM ET
+    - cron: '40 20 * * 1-5'  # 4:40 PM EDT (dedup with 3:40 PM EST)
+    - cron: '40 21 * * 1-5'  # 4:40 PM EST
+    # 4:50 PM ET
+    - cron: '50 20 * * 1-5'  # 4:50 PM EDT (dedup with 3:50 PM EST)
+    - cron: '50 21 * * 1-5'  # 4:50 PM EST
+
     # 5:00 PM ET
     - cron: '0 21 * * 1-5'   # 5:00 PM EDT (dedup with 4:00 PM EST)
     - cron: '0 22 * * 1-5'   # 5:00 PM EST
+    # 5:10 PM ET
+    - cron: '10 21 * * 1-5'  # 5:10 PM EDT (dedup with 4:10 PM EST)
+    - cron: '10 22 * * 1-5'  # 5:10 PM EST
+    # 5:20 PM ET
+    - cron: '20 21 * * 1-5'  # 5:20 PM EDT (dedup with 4:20 PM EST)
+    - cron: '20 22 * * 1-5'  # 5:20 PM EST
     # 5:30 PM ET
     - cron: '30 21 * * 1-5'  # 5:30 PM EDT (dedup with 4:30 PM EST)
     - cron: '30 22 * * 1-5'  # 5:30 PM EST
+    # 5:40 PM ET
+    - cron: '40 21 * * 1-5'  # 5:40 PM EDT (dedup with 4:40 PM EST)
+    - cron: '40 22 * * 1-5'  # 5:40 PM EST
+    # 5:50 PM ET
+    - cron: '50 21 * * 1-5'  # 5:50 PM EDT (dedup with 4:50 PM EST)
+    - cron: '50 22 * * 1-5'  # 5:50 PM EST
+
     # 6:00 PM ET
     - cron: '0 22 * * 1-5'   # 6:00 PM EDT (dedup with 5:00 PM EST)
     - cron: '0 23 * * 1-5'   # 6:00 PM EST
