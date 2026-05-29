@@ -326,19 +326,18 @@ function formatRevenue(amountCents) {
 // ---------------------------------------------------------------------------
 
 // Pull estimates from the /estimates endpoint and filter to "open" ones —
-// estimates that have been delivered to the customer, have a real dollar value,
-// and haven't been approved or rejected yet.
+// $0 estimates within 45 days whose scheduled date has already passed
+// (or unscheduled ones, which use created_at). Excludes canceled and
+// estimates that have already been approved or rejected by the customer.
 async function pullOpenEstimates() {
-  // Window: last 45 days. Estimates older than that are unlikely to be
-  // closable — they're stale leads, not actionable follow-ups.
   const end = new Date();
   const start = new Date();
   start.setUTCDate(start.getUTCDate() - 45);
   start.setUTCHours(0, 0, 0, 0);
 
-  // Paginate through /estimates. HCP's server-side date filter doesn't appear
-  // to apply here, so we may need to walk many pages to find recent estimates.
-  // Cap at 20 pages × 100/page = 2000 estimates max, then filter client-side.
+  // Paginate through /estimates. HCP's server-side date filter doesn't apply
+  // here, so we walk many pages and filter client-side.
+  // Cap at 20 pages × 100/page = 2000 estimates max.
   const allEstimates = [];
   let page = 1;
   const MAX_PAGES = 20;
@@ -364,35 +363,30 @@ async function pullOpenEstimates() {
   }
   console.log(`[build-office-data] pulled ${allEstimates.length} estimates total (raw, before filters)`);
 
-  // Diagnostic — what's the age distribution of what we pulled?
-  if (allEstimates.length > 0) {
-    const now = Date.now();
-    const ages = allEstimates
-      .map(e => e.created_at ? Math.floor((now - new Date(e.created_at).getTime()) / 86400000) : -1)
-      .filter(a => a >= 0);
-    const oldest = Math.max(...ages);
-    const newest = Math.min(...ages);
-    const within45 = ages.filter(a => a <= 45).length;
-    console.log(`[build-office-data] estimate ages: newest=${newest}d, oldest=${oldest}d, within 45 days=${within45}`);
-  }
-
-
-  // Hard age cap — only consider estimates created in the last 45 days.
-  // We do this client-side because HCP's server-side date filter
-  // doesn't appear to be honored on the /estimates endpoint.
   const fortyFiveDaysAgo = new Date();
   fortyFiveDaysAgo.setUTCDate(fortyFiveDaysAgo.getUTCDate() - 45);
+  const fortyFiveDaysAgoTime = fortyFiveDaysAgo.getTime();
 
   // Statuses we EXCLUDE because they mean the estimate is closed/done
   const CLOSED_STATUSES = new Set([
     "user canceled", "pro canceled", "canceled", "deleted",
   ]);
 
+  const now = Date.now();
+
   const openEstimates = allEstimates.filter(est => {
-    // Age cap — must be created within the last 45 days
-    const createdAt = est.created_at;
-    if (!createdAt) return false;
-    if (new Date(createdAt) < fortyFiveDaysAgo) return false;
+    // Reference date for age — scheduled date if it exists, otherwise created date.
+    // This matches what office staff intuitively mean by "how long has this been open."
+    const refDate = est.schedule?.scheduled_start || est.created_at;
+    if (!refDate) return false;
+    const refTime = new Date(refDate).getTime();
+
+    // Age cap — must be within the last 45 days
+    if (refTime < fortyFiveDaysAgoTime) return false;
+
+    // Future-scheduled estimates — skip. Only show items that should already
+    // have happened (or did happen) and still need pricing follow-up.
+    if (refTime > now) return false;
 
     // Exclude canceled/deleted estimates
     if (CLOSED_STATUSES.has(est.work_status)) return false;
@@ -409,31 +403,25 @@ async function pullOpenEstimates() {
     if (approval === "approved" || approval === "rejected") return false;
 
     // ONLY show estimates with $0 total — these are the ones missing pricing.
-    // Covers all stages: not yet scheduled, scheduled, in progress, delivered.
-    // Any $0 estimate sitting in HCP needs attention from someone.
+    // Covers all stages: unscheduled, past-scheduled, and delivered.
     const amount = opt.total_amount || 0;
     if (amount > 0) return false;
 
     return true;
   });
 
-  // Sort by created_at ascending — oldest first (highest age)
-  openEstimates.sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
-
-  const now = Date.now();
-  // Diagnostic — print each open estimate's date fields so we can verify which is accurate
-  console.log("[build-office-data] open estimates date check (created_at vs updated_at):");
-  for (const est of openEstimates.slice(0, 16)) {
-    const createdAt = est.created_at;
-    const updatedAt = est.updated_at;
-    const createdAge = createdAt ? Math.floor((now - new Date(createdAt).getTime()) / 86400000) : "?";
-    const updatedAge = updatedAt ? Math.floor((now - new Date(updatedAt).getTime()) / 86400000) : "?";
-    console.log(`  #${est.estimate_number} ${customerLastName(est).padEnd(20)} created=${(createdAt || "?").slice(0, 10)} (${createdAge}d) updated=${(updatedAt || "?").slice(0, 10)} (${updatedAge}d)`);
-  }
+  // Sort by reference date ascending — oldest first (highest age)
+  openEstimates.sort((a, b) => {
+    const aRef = a.schedule?.scheduled_start || a.created_at || "";
+    const bRef = b.schedule?.scheduled_start || b.created_at || "";
+    return aRef.localeCompare(bRef);
+  });
 
   return openEstimates.map(est => {
     const opt = est.options[0];
-    const refDate = est.created_at;
+    // Age based on scheduled date — "tech went out X days ago and didn't enter pricing"
+    // For unscheduled estimates, fall back to created_at
+    const refDate = est.schedule?.scheduled_start || est.created_at;
     const ageDays = refDate ? Math.floor((now - new Date(refDate).getTime()) / 86400000) : 0;
     const techName = (est.assigned_employees || [])[0]?.first_name || "";
     return {
@@ -581,33 +569,12 @@ export async function buildOfficeData({ calendarId } = {}) {
   const now = nowET();
   const crew = [];
 
-  // DEBUG: log every job and its assigned employees, so we can see what HCP returns
-  console.log(`[build-office-data] DEBUG: ${todayJobs.length} jobs for today, breakdown of employee assignments:`);
-  for (const j of todayJobs) {
-    const employees = j.assigned_employees || [];
-    const empIds = employees.map(e => `${e.first_name || ""} ${e.last_name || ""}|${e.id}`).join(" + ");
-    const status = j.work_status || "?";
-    const sched = j.schedule?.scheduled_start ? j.schedule.scheduled_start.slice(11, 16) : "??:??";
-    console.log(`  ${sched} [${status}] ${(j.description || "no desc").slice(0, 40)} → ${empIds || "(unassigned)"}`);
-  }
-  console.log(`[build-office-data] DEBUG: matching against ${TIME_TRACKING_TECHS.length} techs in roster`);
-  for (const t of TIME_TRACKING_TECHS) {
-    console.log(`  ${t.display} → ${t.id}`);
-  }
-
   for (const tech of TIME_TRACKING_TECHS) {
     const techJobs = todayJobs.filter(j => {
       const employees = j.assigned_employees || [];
       return employees.some(e => e.id === tech.id);
     });
-    console.log(`[build-office-data] DEBUG match: ${tech.display} (${tech.id}) → matched ${techJobs.length} jobs`);
-    if (techJobs.length > 0) {
-      for (const j of techJobs) {
-        console.log(`  - ${j.work_status} @ ${j.schedule?.scheduled_start?.slice(11, 16)} ${(j.description || "").slice(0, 40)}`);
-      }
-    }
     const status = classifyTechStatus(tech, techJobs, ooOfficeNames, now);
-    console.log(`[build-office-data] DEBUG status: ${tech.display} → ${status.status} (${status.label})`);
     crew.push({
       tech: {
         id: tech.id,
@@ -631,7 +598,6 @@ export async function buildOfficeData({ calendarId } = {}) {
   });
 
   const todaySummary = buildTodaySummary(todayJobs);
-  const totalOpenEstValue = openEstimates.reduce((sum, e) => sum + e.amount, 0);
   const totalPastDueValue = pastDueInvoices.reduce((sum, i) => sum + i.amount, 0);
 
   const hotList = buildHotList(crew, openEstimates, pastDueInvoices);
