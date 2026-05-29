@@ -54,6 +54,41 @@ function etOffsetHours(date) {
   return date.getUTCDate() >= 1 ? -5 : -4;
 }
 
+// Returns a Date pointing to Monday-of-two-weeks-ago at 00:00 ET.
+// Used as the cutoff for "current week + previous two weeks" filtering.
+function mondayTwoWeeksAgoET() {
+  const now = new Date();
+
+  // Get today's calendar date in ET
+  const etFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: ET,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+  });
+  const parts = etFormatter.formatToParts(now);
+  const y = parseInt(parts.find(p => p.type === "year").value, 10);
+  const m = parseInt(parts.find(p => p.type === "month").value, 10);
+  const d = parseInt(parts.find(p => p.type === "day").value, 10);
+  const weekday = parts.find(p => p.type === "weekday").value; // "Mon", "Tue", etc.
+
+  // Days to subtract to reach Monday of THIS week
+  const dayOffsets = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+  const daysToThisMonday = dayOffsets[weekday] ?? 0;
+
+  // Total days back: to this Monday, then 14 more days (2 prior weeks)
+  const totalDaysBack = daysToThisMonday + 14;
+
+  // Construct the cutoff date at midnight ET
+  const offsetHours = etOffsetHours(now);
+  const offsetStr = offsetHours === -4 ? "-04:00" : "-05:00";
+  const todayMidnightET = new Date(`${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}T00:00:00${offsetStr}`);
+  const cutoffET = new Date(todayMidnightET.getTime() - totalDaysBack * 86400000);
+
+  return cutoffET;
+}
+
 function fmtTimeET(isoString) {
   if (!isoString) return null;
   return new Intl.DateTimeFormat("en-US", {
@@ -326,10 +361,12 @@ function formatRevenue(amountCents) {
 // ---------------------------------------------------------------------------
 
 // Pull estimates from the /estimates endpoint and filter to "open" ones —
-// $0 estimates within 45 days whose scheduled date has already passed
-// (or unscheduled ones, which use created_at). Excludes canceled and
-// estimates that have already been approved or rejected by the customer.
+// $0 estimates dated within the current calendar week + 2 prior weeks,
+// whose scheduled date has already passed (or unscheduled, which use created_at).
+// Excludes canceled and estimates that have been approved or rejected.
 async function pullOpenEstimates() {
+  // Pull a generous window — we'll filter to current+2 weeks client-side.
+  // Window: last 45 days (still useful as a coarse pull window).
   const end = new Date();
   const start = new Date();
   start.setUTCDate(start.getUTCDate() - 45);
@@ -363,9 +400,10 @@ async function pullOpenEstimates() {
   }
   console.log(`[build-office-data] pulled ${allEstimates.length} estimates total (raw, before filters)`);
 
-  const fortyFiveDaysAgo = new Date();
-  fortyFiveDaysAgo.setUTCDate(fortyFiveDaysAgo.getUTCDate() - 45);
-  const fortyFiveDaysAgoTime = fortyFiveDaysAgo.getTime();
+  // Calendar-week cutoff: Monday of two weeks ago at 00:00 ET
+  const cutoffDate = mondayTwoWeeksAgoET();
+  const cutoffTime = cutoffDate.getTime();
+  console.log(`[build-office-data] estimates cutoff: ${cutoffDate.toISOString()} (this week + 2 prior weeks)`);
 
   // Statuses we EXCLUDE because they mean the estimate is closed/done
   const CLOSED_STATUSES = new Set([
@@ -375,14 +413,13 @@ async function pullOpenEstimates() {
   const now = Date.now();
 
   const openEstimates = allEstimates.filter(est => {
-    // Reference date for age — scheduled date if it exists, otherwise created date.
-    // This matches what office staff intuitively mean by "how long has this been open."
+    // Reference date — scheduled date if it exists, otherwise created date.
     const refDate = est.schedule?.scheduled_start || est.created_at;
     if (!refDate) return false;
     const refTime = new Date(refDate).getTime();
 
-    // Age cap — must be within the last 45 days
-    if (refTime < fortyFiveDaysAgoTime) return false;
+    // Window: must be within current week + 2 prior weeks
+    if (refTime < cutoffTime) return false;
 
     // Future-scheduled estimates — skip. Only show items that should already
     // have happened (or did happen) and still need pricing follow-up.
@@ -403,7 +440,6 @@ async function pullOpenEstimates() {
     if (approval === "approved" || approval === "rejected") return false;
 
     // ONLY show estimates with $0 total — these are the ones missing pricing.
-    // Covers all stages: unscheduled, past-scheduled, and delivered.
     const amount = opt.total_amount || 0;
     if (amount > 0) return false;
 
@@ -438,7 +474,8 @@ async function pullOpenEstimates() {
 }
 
 async function pullPastDueInvoices() {
-  // Pull jobs from the last 90 days with outstanding balance
+  // Pull jobs from a generous 90-day window for context, then filter to
+  // current calendar week + 2 prior weeks on the office display.
   const end = new Date();
   const start = new Date();
   start.setUTCDate(start.getUTCDate() - 90);
@@ -453,22 +490,29 @@ async function pullPastDueInvoices() {
     return COMPLETE_STATUSES.has(j.work_status);
   });
 
-  // Calculate age from work_timestamps.completed_at (when work finished)
+  // Calendar-week cutoff: Monday of two weeks ago at 00:00 ET
+  const cutoffDate = mondayTwoWeeksAgoET();
+  const cutoffTime = cutoffDate.getTime();
+  console.log(`[build-office-data] past-due invoices cutoff: ${cutoffDate.toISOString()} (this week + 2 prior weeks)`);
+
+  // Calculate age from completed_at, filter to the calendar-week window
   const now = Date.now();
   const withAge = unpaid.map(j => {
     const completedAt = j.work_timestamps?.completed_at || j.schedule?.scheduled_end;
     const ageDays = completedAt ? Math.floor((now - new Date(completedAt).getTime()) / 86400000) : 0;
+    const completedTime = completedAt ? new Date(completedAt).getTime() : 0;
     return {
       id: j.id,
       ageDays,
+      completedTime,
       amount: j.outstanding_balance || 0,
       amountDisplay: formatRevenue(j.outstanding_balance || 0),
       customer: customerLastName(j),
     };
   });
 
-  // Filter to truly past due (more than 7 days old)
-  const pastDue = withAge.filter(i => i.ageDays >= 7);
+  // Filter: completed within current week + 2 prior weeks
+  const pastDue = withAge.filter(i => i.completedTime >= cutoffTime);
   pastDue.sort((a, b) => b.ageDays - a.ageDays);
   return pastDue;
 }
@@ -521,14 +565,14 @@ function buildHotList(crew, openEstimates, pastDueInvoices) {
     }
   }
 
-  // 3. Aging invoices (>21 days) — ROTATED. The seed is based on the current
+  // 3. Aging invoices — ROTATED. The seed is based on the current
   // 30-minute window, so the rotation changes naturally throughout the day
-  // but stays stable within a single build's data.
+  // but stays stable within a single build's data. Now showing only invoices
+  // within current week + 2 prior weeks (handled in pullPastDueInvoices).
   if (hot.length < 3) {
-    const oldInvoices = pastDueInvoices.filter(i => i.ageDays >= 21);
-    // Seed: 30-min window number since epoch
+    // Use everything in the past-due list since it's already windowed
     const seed = Math.floor(Date.now() / (30 * 60 * 1000));
-    const shuffled = seededShuffle(oldInvoices, seed);
+    const shuffled = seededShuffle(pastDueInvoices, seed);
     for (const i of shuffled) {
       hot.push({
         severity: "medium",
