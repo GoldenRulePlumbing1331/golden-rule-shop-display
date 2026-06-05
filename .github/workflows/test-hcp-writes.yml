@@ -1,0 +1,26 @@
+name: Test HCP Writes (Diagnostic)
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_job_id:
+        description: 'HCP job ID to use for the test (e.g. job_xxxxxxxxx)'
+        required: true
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install
+      - name: Run HCP writes diagnostic
+        env:
+          HCP_API_KEY: ${{ secrets.HCP_API_KEY }}
+          TEST_JOB_ID: ${{ inputs.test_job_id }}
+        run: npm run test-hcp-writes
