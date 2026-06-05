@@ -10,7 +10,8 @@
     "test-tag-durations": "node scripts/test-tag-durations.js",
     "build-data-preview": "node scripts/build-data-preview.js",
     "build-deck": "node scripts/build-deck.js",
-    "build-office": "node scripts/build-office.js"
+    "build-office": "node scripts/build-office.js",
+    "test-hcp-writes": "node scripts/test-hcp-writes.js"
   },
   "dependencies": {
     "googleapis": "^144.0.0",
