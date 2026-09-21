@@ -295,13 +295,14 @@ export const TIME_TRACKING_TECHS = [
   { id: "pro_2ad90ce39da54e669fdf80d7d0642c74", first: "Matt",   last: "Shew",      display: "Matt" },
   { id: "pro_dce147af238f473fa002e40d9eb78b59", first: "Rudy",   last: "Dimemmo",   display: "Rudy" },
   { id: "pro_f2b087323f4844feac6f872692f94575", first: "Mark",   last: "Wileczek",  display: "Mark" },
-  { id: "pro_c16796482f324fd6b9a0aa6cf2c2e200", first: "Tanner", last: "Lasco",     display: "Tanner" },
   { id: "pro_2493967341af4b11a1f93223670a2eb6", first: "Sam",    last: "Parry",     display: "Sam" },
   { id: "pro_31c8e5be25454345a92c54e461a81034", first: "Dom",    last: "Facciolo",  display: "Dom" },
   { id: "pro_334b5e2b6f6749ebbfd07753f850b23c", first: "Pat",    last: "Donnelly",  display: "Pat" },
   { id: "pro_4fa8fe66def94c0ba0455943825f9f78", first: "Kevin",  last: "Donnelly",  display: "Kevin" },
   { id: "pro_672e3970d1924afa8f18a4d6020613fc", first: "Ed",     last: "Carr",      display: "Ed" },
   { id: "pro_80742babc13b413c887ce9b104a645d9", first: "Jay",    last: "Stetser",   display: "Jay" },
+  { id: "pro_d49a0a63b1564687bf73523671f3899a", first: "Jacob",  last: "Gillespie", display: "Jacob" },
+  { id: "pro_06d8d78aa506478894c4c1ac5b2f5893", first: "Connor", last: "Byrd",      display: "Connor" },
 ];
 
 export async function getCompletedByTech({ startISO, endISO }) {
