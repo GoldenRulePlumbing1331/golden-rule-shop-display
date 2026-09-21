@@ -1,0 +1,38 @@
+name: Keepalive
+
+# The shop deck and office display are rebuilt by the scheduled "Build deck"
+# workflow. GitHub stops running scheduled workflows in repositories that have
+# had no commit activity (documented threshold: 60 days). On 2026-09-21 both
+# displays went stale for exactly this reason - the last commit was 2026-06-05,
+# 108 days earlier.
+#
+# This workflow makes a small empty commit whenever the repository has been
+# quiet for 20+ days, so the inactivity clock never runs out again.
+
+on:
+  schedule:
+    - cron: '0 13 * * 1'   # Mondays ~9:00 AM ET
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Commit if the repository has been quiet
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          AGE_DAYS=$(( ( $(date +%s) - $(git log -1 --format=%ct) ) / 86400 ))
+          echo "Days since last commit: $AGE_DAYS"
+          if [ "$AGE_DAYS" -ge 20 ]; then
+            git commit --allow-empty -m "chore(keepalive): keep scheduled workflows enabled"
+            git push
+            echo "Keepalive commit pushed."
+          else
+            echo "Repository active within the last 20 days - nothing to do."
+          fi
