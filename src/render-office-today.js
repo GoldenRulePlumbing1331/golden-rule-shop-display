@@ -14,6 +14,8 @@ const COLORS = {
   GREEN_SOFT:  "#C8E6C9",
   AMBER:       "#F9A825",
   AMBER_SOFT:  "#FFF9C4",
+  BLUE:        "#1565C0",
+  BLUE_SOFT:   "#BBDEFB",
   GRAY_TEXT:   "#4A5A70",
   GRAY_MUTED:  "#7A8599",
   GRAY_LINE:   "#D1D8E2",
@@ -53,6 +55,7 @@ function fmtFullDate(d) {
 function statusBadgeClass(statusKey) {
   const map = {
     on_site: "on-site",
+    multi_day: "multi-day",
     en_route: "en-route",
     late: "late",
     available: "available",
@@ -215,6 +218,7 @@ function buildCSS() {
       text-align: center;
     }
     .badge.on-site { background: ${COLORS.GREEN_SOFT}; color: ${COLORS.GREEN_OK}; }
+    .badge.multi-day { background: ${COLORS.BLUE_SOFT}; color: ${COLORS.BLUE}; }
     .badge.en-route { background: ${COLORS.AMBER_SOFT}; color: ${COLORS.AMBER}; }
     .badge.late { background: ${COLORS.RED_SOFT}; color: ${COLORS.RED_ALERT}; }
     .badge.available { background: ${COLORS.STEEL_LIGHT}; color: ${COLORS.STEEL}; }
@@ -435,6 +439,9 @@ function renderCrewTable(crew) {
     if (s.status === "on_site") {
       detailText = s.detail || "";
       timeText = s.elapsed ? `${s.elapsed} on site` : "";
+    } else if (s.status === "multi_day") {
+      detailText = s.detail || "";
+      timeText = s.etaTime ? `sched ${s.etaTime}` : (s.dayLabel || "");
     } else if (s.status === "en_route") {
       detailText = s.detail || "";
       timeText = s.etaTime ? `sched ${s.etaTime}` : "";

@@ -60,6 +60,14 @@ export async function getJobsInRange({ startISO, endISO, pageSize = 100, page = 
   });
 }
 
+// Lists the appointments (visits) on one job. A multi-day job has one
+// appointment per visit, each with its own date/time and its own dispatched
+// employees. The job-level schedule alone can't tell you who is out there on
+// which day.
+export async function getJobAppointments(jobId) {
+  return hcpFetch(`/jobs/${encodeURIComponent(jobId)}/appointments`);
+}
+
 // Lists all employees on the account.
 // Returns one page; HCP accounts rarely have 100+ employees so pagination is unlikely.
 export async function getEmployees({ pageSize = 100, page = 1 } = {}) {
