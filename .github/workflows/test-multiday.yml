@@ -1,0 +1,21 @@
+name: Test multi-day jobs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-multiday:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Dump open multi-day jobs and their appointments
+        env:
+          HCP_API_KEY: ${{ secrets.HCP_API_KEY }}
+        run: npm run test-multiday

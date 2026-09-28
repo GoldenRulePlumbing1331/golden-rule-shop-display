@@ -11,7 +11,8 @@
     "build-data-preview": "node scripts/build-data-preview.js",
     "build-deck": "node scripts/build-deck.js",
     "build-office": "node scripts/build-office.js",
-    "test-hcp-writes": "node scripts/test-hcp-writes.js"
+    "test-hcp-writes": "node scripts/test-hcp-writes.js",
+    "test-multiday": "node scripts/test-multiday.js"
   },
   "dependencies": {
     "googleapis": "^144.0.0",

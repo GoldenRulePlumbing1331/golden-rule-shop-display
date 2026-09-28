@@ -1,7 +1,7 @@
 // Office display data layer.
 // Pulls today's HCP data and shapes it into a dashboard-ready structure.
 
-import { getJobsInRange, getEmployees } from "./hcp.js";
+import { getJobsInRange, getEmployees, getJobAppointments } from "./hcp.js";
 import { readCalendarEvents } from "./google.js";
 import { TIME_TRACKING_TECHS } from "./jobs.js";
 import { overrideFirstName } from "./name-overrides.js";
@@ -158,6 +158,209 @@ async function pullJobsInRange(startISO, endISO) {
 }
 
 // ---------------------------------------------------------------------------
+// Multi-day jobs
+// ---------------------------------------------------------------------------
+// HCP's /jobs date filter matches on the job's scheduled start — its FIRST day.
+// A job that began on an earlier day never comes back in "today's" pull, even
+// when a tech is dispatched to it today, so that tech used to show
+// "NO JOBS TODAY". To catch them we look back for jobs that started earlier
+// and are still open, then check each one's appointments for a visit today.
+
+const MULTI_DAY_LOOKBACK_DAYS = 30;
+const MULTI_DAY_MAX_CANDIDATES = 100;
+const APPOINTMENT_FETCH_CONCURRENCY = 5;
+
+const CANCELED_STATUSES = new Set([
+  "user canceled",
+  "pro canceled",
+  "canceled",
+  "deleted",
+]);
+
+// "YYYY-MM-DD" for the ET calendar day an instant falls on.
+function etDateKey(isoOrDate) {
+  if (!isoOrDate) return null;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: ET,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(isoOrDate));
+  const get = t => parts.find(p => p.type === t).value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+// ET calendar days a visit covers: its start day, plus any weekdays after it
+// through the end day. Used only for the "Day 2 of 3" label.
+function coveredDates(startISO, endISO) {
+  const startKey = etDateKey(startISO);
+  if (!startKey) return [];
+  // An end at exactly midnight belongs to the day before.
+  const endKey = endISO
+    ? etDateKey(new Date(new Date(endISO).getTime() - 60000))
+    : startKey;
+  const out = [];
+  let cursor = new Date(`${startKey}T12:00:00Z`);
+  for (let i = 0; i < 60; i++) {
+    const key = cursor.toISOString().slice(0, 10);
+    if (key > endKey && out.length > 0) break;
+    const dow = cursor.getUTCDay();
+    if (key === startKey || (dow !== 0 && dow !== 6)) out.push(key);
+    cursor = new Date(cursor.getTime() + 86400000);
+  }
+  return out;
+}
+
+// Employee ids on one appointment. Returns null when the payload doesn't say,
+// so the caller falls back to the job's assigned employees.
+function appointmentEmployeeIds(a) {
+  for (const list of [a.dispatched_employees_ids, a.dispatched_employee_ids, a.employee_ids]) {
+    if (Array.isArray(list)) return list;
+  }
+  const objs = a.dispatched_employees || a.assigned_employees || a.employees;
+  if (Array.isArray(objs)) {
+    return objs.map(e => (typeof e === "string" ? e : e?.id)).filter(Boolean);
+  }
+  return null;
+}
+
+function readAppointments(respOrList) {
+  const list = Array.isArray(respOrList)
+    ? respOrList
+    : (respOrList?.appointments || respOrList?.data || []);
+  return list
+    .map(a => ({
+      start: a.start_time || a.scheduled_start || a.start || null,
+      end: a.end_time || a.scheduled_end || a.end || null,
+      employeeIds: appointmentEmployeeIds(a),
+    }))
+    .filter(v => v.start);
+}
+
+let appointmentFetchWarned = false;
+
+// All visits on a job: from its appointments when HCP has them, otherwise the
+// job's own schedule window treated as one (possibly multi-day) visit.
+async function getJobVisits(job) {
+  const embedded = job.appointments || job.schedule?.appointments;
+  if (Array.isArray(embedded) && embedded.length > 0) {
+    const visits = readAppointments(embedded);
+    if (visits.length > 0) return { visits, source: "embedded" };
+  }
+
+  try {
+    const visits = readAppointments(await getJobAppointments(job.id));
+    if (visits.length > 0) return { visits, source: "appointments" };
+  } catch (e) {
+    if (!appointmentFetchWarned) {
+      appointmentFetchWarned = true;
+      console.warn(`[build-office-data] appointments fetch failed (falling back to job schedule): ${e.message.split("\n")[0]}`);
+    }
+  }
+
+  const start = job.schedule?.scheduled_start;
+  const end = job.schedule?.scheduled_end;
+  return {
+    visits: start ? [{ start, end: end || null, employeeIds: null }] : [],
+    source: "schedule",
+  };
+}
+
+function visitOverlaps(visit, windowStartMs, windowEndMs) {
+  const s = new Date(visit.start).getTime();
+  const e = visit.end ? new Date(visit.end).getTime() : s;
+  return s <= windowEndMs && e >= windowStartMs;
+}
+
+async function forEachWithConcurrency(items, limit, fn) {
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const item = items[next++];
+      await fn(item);
+    }
+  });
+  await Promise.all(workers);
+}
+
+// Finds jobs that started before today but have a visit today.
+// Returns { byTech: Map<techId, entry[]>, jobs: job[] } where each entry is
+// { job, dayNumber, totalDays, todayVisitStart, source }.
+async function findMultiDayJobsToday({ startISO, endISO, todayDateOnlyET, trackedIds }) {
+  const todayStartMs = new Date(startISO).getTime();
+  const todayEndMs = new Date(endISO).getTime();
+  const lookbackStart = new Date(todayStartMs - MULTI_DAY_LOOKBACK_DAYS * 86400000).toISOString();
+  // Stop just before today's window so nothing is counted twice.
+  const lookbackEnd = new Date(todayStartMs - 1000).toISOString();
+
+  const earlierJobs = await pullJobsInRange(lookbackStart, lookbackEnd);
+
+  let candidates = earlierJobs.filter(j => {
+    if (CANCELED_STATUSES.has(j.work_status)) return false;
+    if (!(j.assigned_employees || []).some(e => trackedIds.has(e.id))) return false;
+    // Finished jobs only matter if they were finished today (their final day).
+    if (COMPLETE_STATUSES.has(j.work_status)) {
+      return etDateKey(j.work_timestamps?.completed_at) === todayDateOnlyET;
+    }
+    return true;
+  });
+
+  // Newest first, so if the cap is ever hit the stalest jobs are the ones dropped.
+  candidates.sort((a, b) =>
+    (b.schedule?.scheduled_start || "").localeCompare(a.schedule?.scheduled_start || "")
+  );
+  if (candidates.length > MULTI_DAY_MAX_CANDIDATES) {
+    console.warn(`[build-office-data] ${candidates.length} multi-day candidates — checking newest ${MULTI_DAY_MAX_CANDIDATES}`);
+    candidates = candidates.slice(0, MULTI_DAY_MAX_CANDIDATES);
+  }
+  console.log(`[build-office-data] Multi-day check: ${earlierJobs.length} jobs in prior ${MULTI_DAY_LOOKBACK_DAYS} days, ${candidates.length} still open (or finished today)`);
+
+  const byTech = new Map();
+  const jobs = [];
+
+  await forEachWithConcurrency(candidates, APPOINTMENT_FETCH_CONCURRENCY, async job => {
+    try {
+      const { visits, source } = await getJobVisits(job);
+      const todays = visits.filter(v => visitOverlaps(v, todayStartMs, todayEndMs));
+      if (todays.length === 0) return;
+
+      const assignedIds = (job.assigned_employees || []).map(e => e.id);
+      const techIds = new Set();
+      for (const v of todays) {
+        for (const id of (v.employeeIds ?? assignedIds)) techIds.add(id);
+      }
+
+      const dates = new Set([todayDateOnlyET]);
+      for (const v of visits) for (const k of coveredDates(v.start, v.end)) dates.add(k);
+      const ordered = [...dates].sort();
+
+      const entry = {
+        job,
+        dayNumber: ordered.indexOf(todayDateOnlyET) + 1,
+        totalDays: ordered.length,
+        todayVisitStart: todays.map(v => v.start).sort()[0],
+        source,
+      };
+      jobs.push(job);
+      for (const id of techIds) {
+        if (!byTech.has(id)) byTech.set(id, []);
+        byTech.get(id).push(entry);
+      }
+
+      const names = (job.assigned_employees || [])
+        .filter(e => techIds.has(e.id))
+        .map(e => e.first_name)
+        .join(", ");
+      console.log(`[build-office-data]   multi-day today: ${customerLastName(job)} — day ${entry.dayNumber}/${entry.totalDays} — ${names || "(no tracked tech)"} [${source}]`);
+    } catch (e) {
+      console.warn(`[build-office-data] multi-day check failed for job ${job.id}: ${e.message}`);
+    }
+  });
+
+  return { byTech, jobs };
+}
+
+// ---------------------------------------------------------------------------
 // Out-of-office detection — same logic as events slide
 // ---------------------------------------------------------------------------
 
@@ -217,13 +420,13 @@ async function getOutOfOfficeTechsToday(calendarId, todayDateOnly) {
 // Crew status per tech
 // ---------------------------------------------------------------------------
 
-function classifyTechStatus(tech, jobsToday, outOfOfficeNames, now) {
+function classifyTechStatus(tech, jobsToday, multiDayToday, outOfOfficeNames, now) {
   const techDisplayUpper = tech.display.toUpperCase();
   if (outOfOfficeNames.has(techDisplayUpper) || outOfOfficeNames.has(tech.first.toUpperCase())) {
     return { status: "out", label: "OUT", color: "🚫" };
   }
 
-  if (jobsToday.length === 0) {
+  if (jobsToday.length === 0 && multiDayToday.length === 0) {
     return { status: "no_jobs", label: "NO JOBS TODAY", color: "🔘" };
   }
 
@@ -279,18 +482,43 @@ function classifyTechStatus(tech, jobsToday, outOfOfficeNames, now) {
     };
   }
 
+  // On a multi-day job today. HCP tracks OMW/start/finish once per job (not
+  // per visit), so the job's started_at is from day one — show which day of
+  // the job this is instead of an "on site" timer.
+  const openMultiDay = multiDayToday.filter(e => !COMPLETE_STATUSES.has(e.job.work_status));
+  if (openMultiDay.length > 0) {
+    // Prefer a visit that's already underway; otherwise the next one today.
+    const nowMs = now.getTime();
+    const sorted = [...openMultiDay].sort((a, b) =>
+      (a.todayVisitStart || "").localeCompare(b.todayVisitStart || "")
+    );
+    const underway = sorted.filter(e => new Date(e.todayVisitStart).getTime() <= nowMs);
+    const entry = underway.length > 0 ? underway[underway.length - 1] : sorted[0];
+    const startsLater = new Date(entry.todayVisitStart).getTime() > nowMs;
+    return {
+      status: "multi_day",
+      label: "MULTI-DAY",
+      color: "🔵",
+      detail: customerLastName(entry.job),
+      dayLabel: entry.totalDays > 1 ? `Day ${entry.dayNumber} of ${entry.totalDays}` : "",
+      etaTime: startsLater ? fmtTimeET(entry.todayVisitStart) : null,
+    };
+  }
+
   // Partition: completed jobs vs upcoming jobs
   const upcomingJobs = jobsToday.filter(j => {
     return j.work_status === "scheduled" && !COMPLETE_STATUSES.has(j.work_status);
   });
 
   // If there are no upcoming jobs, all jobs are completed → DAY COMPLETE
+  // (includes a multi-day job whose final day was today)
   if (upcomingJobs.length === 0) {
+    const doneCount = jobsToday.length + multiDayToday.length;
     return {
       status: "done",
       label: "DAY COMPLETE",
       color: "⚫",
-      detail: `${jobsToday.length} job${jobsToday.length === 1 ? "" : "s"} complete`,
+      detail: `${doneCount} job${doneCount === 1 ? "" : "s"} complete`,
     };
   }
 
@@ -596,15 +824,22 @@ export async function buildOfficeData({ calendarId } = {}) {
   const { startISO, endISO, todayDateOnlyET } = todayBoundsET();
   console.log(`[build-office-data] Today (ET): ${todayDateOnlyET}, range: ${startISO} → ${endISO}`);
 
-  // Fetch in parallel
-  const [todayJobs, ooOfficeNames, openEstimates, pastDueInvoices] = await Promise.all([
+  const trackedIds = new Set(TIME_TRACKING_TECHS.map(t => t.id));
+
+  // Fetch in parallel. The multi-day check is best-effort: if it fails, the
+  // board still builds exactly as it did before.
+  const [todayJobs, multiDay, ooOfficeNames, openEstimates, pastDueInvoices] = await Promise.all([
     pullJobsInRange(startISO, endISO),
+    findMultiDayJobsToday({ startISO, endISO, todayDateOnlyET, trackedIds }).catch(e => {
+      console.warn(`[build-office-data] multi-day check failed: ${e.message}`);
+      return { byTech: new Map(), jobs: [] };
+    }),
     getOutOfOfficeTechsToday(calendarId, todayDateOnlyET),
     pullOpenEstimates(),
     pullPastDueInvoices(),
   ]);
 
-  console.log(`[build-office-data] Pulled ${todayJobs.length} jobs for today`);
+  console.log(`[build-office-data] Pulled ${todayJobs.length} jobs for today (+${multiDay.jobs.length} multi-day jobs with a visit today)`);
   console.log(`[build-office-data] OOO techs today: ${[...ooOfficeNames].join(", ") || "(none)"}`);
   console.log(`[build-office-data] Open estimates: ${openEstimates.length}`);
   console.log(`[build-office-data] Past-due invoices: ${pastDueInvoices.length}`);
@@ -618,21 +853,22 @@ export async function buildOfficeData({ calendarId } = {}) {
       const employees = j.assigned_employees || [];
       return employees.some(e => e.id === tech.id);
     });
-    const status = classifyTechStatus(tech, techJobs, ooOfficeNames, now);
+    const techMultiDay = multiDay.byTech.get(tech.id) || [];
+    const status = classifyTechStatus(tech, techJobs, techMultiDay, ooOfficeNames, now);
     crew.push({
       tech: {
         id: tech.id,
         display: tech.display,
       },
       status,
-      jobCount: techJobs.length,
+      jobCount: techJobs.length + techMultiDay.length,
     });
   }
 
   // Sort crew: active/working first, then available, then out
   const statusPriority = {
-    on_site: 1, en_route: 2, late: 3, available: 4, idle: 5,
-    done: 6, no_jobs: 7, out: 8,
+    on_site: 1, multi_day: 2, en_route: 3, late: 4, available: 5, idle: 6,
+    done: 7, no_jobs: 8, out: 9,
   };
   crew.sort((a, b) => {
     const aP = statusPriority[a.status.status] || 99;
@@ -641,7 +877,9 @@ export async function buildOfficeData({ calendarId } = {}) {
     return a.tech.display.localeCompare(b.tech.display);
   });
 
-  const todaySummary = buildTodaySummary(todayJobs);
+  // Multi-day jobs with a visit today count toward today's numbers too
+  // (in progress, or completed + revenue if today was the final day).
+  const todaySummary = buildTodaySummary([...todayJobs, ...multiDay.jobs]);
   const totalPastDueValue = pastDueInvoices.reduce((sum, i) => sum + i.amount, 0);
 
   const hotList = buildHotList(crew, openEstimates, pastDueInvoices);
