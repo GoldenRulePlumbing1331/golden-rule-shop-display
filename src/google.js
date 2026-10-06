@@ -63,6 +63,16 @@ export async function readSheet(spreadsheetId, tabName) {
     });
 }
 
+// Reads a range as a plain 2-D array, without treating row 1 as headers.
+// Used for report-style tabs (like the HCP Buttons dashboard) where several
+// tables are stacked on one sheet.
+export async function readSheetRaw(spreadsheetId, range) {
+  const auth = await getAuth().getClient();
+  const sheets = google.sheets({ version: "v4", auth });
+  const resp = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+  return resp.data.values || [];
+}
+
 // ---- Calendar ----
 
 export async function readCalendarEvents(calendarId, { startISO, endISO } = {}) {

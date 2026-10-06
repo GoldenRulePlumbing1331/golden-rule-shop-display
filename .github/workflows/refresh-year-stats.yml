@@ -1,0 +1,34 @@
+name: Refresh yearly tech stats
+
+# The Tech Stats slide reads data/tech-year-stats.json. Pulling a full year of
+# jobs from Housecall Pro is heavy, so it runs weekly (Monday 5:00 AM ET-ish)
+# instead of on every 10-minute board build. Run it by hand any time.
+on:
+  schedule:
+    - cron: '0 10 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - name: Compute yearly stats
+        env:
+          HCP_API_KEY: ${{ secrets.HCP_API_KEY }}
+        run: npm run refresh-year-stats
+      - name: Commit updated stats
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/tech-year-stats.json
+          git diff --cached --quiet && { echo "No change."; exit 0; }
+          git commit -m "Refresh yearly tech stats"
+          git push

@@ -1,42 +1,29 @@
+// Builds the shop slideshow HTML (output/GoldenRule_ShopBriefing_CURRENT.html)
+// and, unless SKIP_PUBLISH=true, uploads it to the "current" GitHub release.
+
 import fs from "fs";
 import { buildData } from "../src/build-data.js";
-import { renderDeck } from "../src/render-deck.js";
 import { renderHTML } from "../src/render-html.js";
 import { publishToCurrentRelease } from "../src/github-release.js";
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
-const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
 const SKIP_PUBLISH = process.env.SKIP_PUBLISH === "true";
 
 (async () => {
   if (!SHEET_ID) throw new Error("GOOGLE_SHEET_ID env var not set");
-  if (!CALENDAR_ID) throw new Error("GOOGLE_CALENDAR_ID env var not set");
 
-  // Make sure the output directory exists (CI runners start fresh; the
-  // pptxgenjs writeFile call doesn't create parent dirs)
   fs.mkdirSync("./output", { recursive: true });
 
   console.log("Fetching data...");
-  const data = await buildData({ sheetId: SHEET_ID, calendarId: CALENDAR_ID });
+  const data = await buildData({ sheetId: SHEET_ID });
   console.log(`Data fetched. Errors during build: ${data.errors.length}`);
-  if (data.errors.length > 0) {
-    for (const e of data.errors) console.warn("  -", e);
-  }
+  for (const e of data.errors) console.warn("  -", e);
 
-  // ---- Build the .pptx (downloadable backup) ----
-  const pptxFilename = "GoldenRule_ShopBriefing_CURRENT.pptx";
-  const pptxPath = `./output/${pptxFilename}`;
-  console.log(`\nRendering .pptx → ${pptxPath}`);
-  const pptxResult = await renderDeck(data, pptxPath);
-  console.log(`  Deck written. ${pptxResult.slideCount} slides:`);
-  pptxResult.plan.forEach((k, i) => console.log(`    ${i + 1}. ${k}`));
-
-  // ---- Build the HTML (shop TV display) ----
   const htmlFilename = "GoldenRule_ShopBriefing_CURRENT.html";
   const htmlPath = `./output/${htmlFilename}`;
   console.log(`\nRendering HTML → ${htmlPath}`);
   const htmlResult = await renderHTML(data, htmlPath);
-  console.log(`  HTML written. ${htmlResult.slideCount} slides.`);
+  console.log(`  HTML written. ${htmlResult.slideCount} slides: ${htmlResult.plan.join(", ")}`);
 
   if (SKIP_PUBLISH) {
     console.log("\nSkipping release publish (SKIP_PUBLISH=true)");
@@ -44,27 +31,14 @@ const SKIP_PUBLISH = process.env.SKIP_PUBLISH === "true";
   }
 
   console.log("\nPublishing to GitHub release 'current'...");
-
-  // Publish the .pptx
-  const pptxPub = await publishToCurrentRelease({
-    filePath: pptxPath,
-    displayName: pptxFilename,
-    weekHumanLabel: data.weekOf.humanLabel,
-  });
-  console.log(`\n✓ .pptx download URL:`);
-  console.log(`  ${pptxPub.downloadUrl}`);
-
-  // Publish the HTML (still useful as a backup, though Pages is the primary URL)
   const htmlPub = await publishToCurrentRelease({
     filePath: htmlPath,
     displayName: htmlFilename,
     weekHumanLabel: data.weekOf.humanLabel,
     contentType: "text/html",
   });
-  console.log(`\n✓ HTML release URL (backup):`);
-  console.log(`  ${htmlPub.downloadUrl}`);
-
-  console.log(`\n  Release page: ${htmlPub.releaseUrl}`);
+  console.log(`\n✓ HTML release URL (backup):\n  ${htmlPub.downloadUrl}`);
+  console.log(`  Release page: ${htmlPub.releaseUrl}`);
 })().catch(err => {
   console.error("FATAL:", err);
   process.exit(1);

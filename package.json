@@ -12,7 +12,11 @@
     "build-deck": "node scripts/build-deck.js",
     "build-office": "node scripts/build-office.js",
     "test-hcp-writes": "node scripts/test-hcp-writes.js",
-    "test-multiday": "node scripts/test-multiday.js"
+    "test-multiday": "node scripts/test-multiday.js",
+    "test-hcp-buttons": "node scripts/test-hcp-buttons.js",
+    "test-reports-offline": "node scripts/test-reports-offline.js",
+    "preview-data-slides": "node scripts/preview-data-slides.js",
+    "refresh-year-stats": "node scripts/refresh-year-stats.js"
   },
   "dependencies": {
     "googleapis": "^144.0.0",
