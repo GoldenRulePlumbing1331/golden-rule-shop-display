@@ -147,6 +147,19 @@ assert.equal(yMatt.hoursPerJob, 2);
 assert.equal(yr.skipped.onJob, 2);                           // multi-day + forgotten-finish
 assert.equal(yr.techs[0].name, "Jay");                       // sorted by job count
 
+// Callbacks: jobs tagged "Callback" (any case), credited to every assigned tech
+const cbJob = (tag, ...techs) => ({
+  ...yJob(100, { started_at: "2026-04-01T14:00:00Z", completed_at: "2026-04-01T15:00:00Z" }, ...techs),
+  tags: [{ name: tag }],
+});
+const cb = rollupTechYear([
+  cbJob("callback", jay, matt), cbJob("Callback", jay), cbJob("Warranty", jay),
+  yJob(100, { started_at: "2026-04-02T14:00:00Z", completed_at: "2026-04-02T15:00:00Z" }, jay), // untagged
+], { now });
+assert.equal(cb.techs.find(t => t.name === "Jay").callbacks, 2);
+assert.equal(cb.techs.find(t => t.name === "Matt").callbacks, 1);
+assert.equal(yr.techs.find(t => t.name === "Jay").callbacks, 0);
+
 // =============================================================================
 // Buttons sheet age
 // =============================================================================

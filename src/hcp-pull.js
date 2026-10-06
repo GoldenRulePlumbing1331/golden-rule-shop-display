@@ -31,3 +31,8 @@ export function jobDoneAt(j) {
     || j.schedule?.scheduled_start
     || null;
 }
+
+// True when the job carries the "Callback" tag (case-insensitive).
+export function isCallbackJob(j) {
+  return (j.tags || []).some(t => String(typeof t === "string" ? t : (t?.name || "")).trim().toLowerCase() === "callback");
+}

@@ -107,12 +107,19 @@ function buildOnCallEntry(row, roster) {
   };
 }
 
+// The on_call_rotation sheet is running one week behind what the shop actually
+// follows, so the board looks one week AHEAD in the sheet: whoever the sheet
+// lists for next week is shown as on call now, and so on. Set to 0 once the
+// sheet's week_start_date column has been corrected.
+export const ON_CALL_SHIFT_WEEKS = 1;
+
 async function buildOnCall(sheetId, roster, nextMon) {
   const rows = await readSheet(sheetId, "on_call_rotation");
   if (rows.length === 0) return { current: null, next: null };
 
-  const today = isoDateOnly(new Date());
-  const nextMonISO = isoDateOnly(nextMon);
+  const shiftDays = ON_CALL_SHIFT_WEEKS * 7;
+  const today = isoDateOnly(addDays(new Date(), shiftDays));
+  const nextMonISO = isoDateOnly(addDays(nextMon, shiftDays));
 
   const past = rows
     .filter(r => r.week_start_date && r.week_start_date <= today)
