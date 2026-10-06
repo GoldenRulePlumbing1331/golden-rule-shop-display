@@ -74,6 +74,9 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_SHEET_ID: ${{ vars.GOOGLE_SHEET_ID }}
           GOOGLE_CALENDAR_ID: ${{ vars.GOOGLE_CALENDAR_ID }}
+          # ID of the "HCP Buttons" Google Sheet. Until this repo variable is set,
+          # the slideshow keeps showing the API-based time-tracking slide.
+          HCP_BUTTONS_SHEET_ID: ${{ vars.HCP_BUTTONS_SHEET_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build-deck
       - name: Build office display HTML

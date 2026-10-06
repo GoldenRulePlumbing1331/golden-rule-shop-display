@@ -16,6 +16,8 @@ import {
 } from "./jobs.js";
 import { readSheet, readCalendarEvents } from "./google.js";
 import { overrideFirstName } from "./name-overrides.js";
+import { getHcpButtons } from "./hcp-buttons.js";
+import { getRevenueByTech, getEstimateWinRates } from "./hcp-reports.js";
 
 // ---------------------------------------------------------------------------
 // Date helpers
@@ -506,6 +508,7 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
     jobBoardR, kpisR, onCallR, eventsR,
     newItemsR, safetyR, shoutoutR, tagDurationsR, hygieneR,
     googleReviewsR, serviceAreasR,
+    hcpButtonsR, revenueR, estimatesR,
   ] = await Promise.all([
     safe("job board", () => buildJobBoard(thisMon, nextMon)),
     safe("KPIs", () => buildKPIs(lastMon, thisMon)),
@@ -518,6 +521,9 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
     safe("hygiene", () => getHygieneStats()),
     safe("google reviews", () => buildGoogleReviews(sheetId, roster)),
     safe("service areas", () => buildServiceAreas(thisMon, 30)),
+    safe("HCP buttons sheet", () => getHcpButtons()),
+    safe("revenue by tech", () => getRevenueByTech()),
+    safe("estimate win rates", () => getEstimateWinRates()),
   ]);
 
   return {
@@ -536,11 +542,15 @@ export async function buildData({ sheetId, calendarId, today = new Date() } = {}
     hygiene:       hygieneR.ok ? hygieneR.data : null,
     googleReviews: googleReviewsR.ok ? googleReviewsR.data : [],
     serviceAreas:  serviceAreasR.ok ? serviceAreasR.data : null,
+    hcpButtons:    hcpButtonsR.ok ? hcpButtonsR.data : null,
+    revenue:       revenueR.ok ? revenueR.data : null,
+    estimates:     estimatesR.ok ? estimatesR.data : null,
     rosterCount: roster.length,
     errors: [
       jobBoardR, kpisR, onCallR, eventsR,
       newItemsR, safetyR, shoutoutR, tagDurationsR, hygieneR,
       googleReviewsR, serviceAreasR,
+      hcpButtonsR, revenueR, estimatesR,
     ].filter(r => !r.ok).map(r => r.error),
   };
 }

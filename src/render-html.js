@@ -25,6 +25,8 @@ const SLIDE_TIMINGS = {
   newitems:     15,
   reviews:      18,
   jobboard:     20,
+  revenue:      22,
+  estimates:    18,
   tagdurations: 20,
   hygiene:      25,
   safety:       18,
@@ -798,6 +800,100 @@ function buildCSS() {
     .chart-area { flex: 1; min-height: 0; padding: 0 2% 2% 2%; position: relative; }
     .chart-area canvas { width: 100%; height: 100%; display: block; }
 
+    /* ---- Data slides: HCP buttons, revenue by truck, estimate win rate ---- */
+    .dt {
+      position: absolute; display: flex; flex-direction: column;
+      border: 1px solid ${COLORS.GRAY_LINE};
+    }
+    .dt-row {
+      display: grid; grid-template-columns: var(--cols);
+      align-items: stretch; flex: 1; min-height: 0;
+    }
+    .dt-row.head { flex: 0 0 5.6%; }
+    .dt-row.head .dt-cell {
+      background: ${COLORS.NAVY_DARK}; color: ${COLORS.YELLOW};
+      font-size: 0.85vw; letter-spacing: 0.12em; border-right: none;
+    }
+    .dt-row.body.alt { background: ${COLORS.STEEL_LIGHT}; }
+    .dt-row.body:not(.alt) { background: ${COLORS.WHITE}; }
+    .dt-cell {
+      display: flex; align-items: center; justify-content: center; min-width: 0;
+      font-family: 'Arial Black', sans-serif; font-weight: 900;
+      color: ${COLORS.NAVY_DARK}; font-size: 1.2vw;
+      border-right: 1px solid ${COLORS.GRAY_LINE};
+    }
+    .dt-cell:last-child { border-right: none; }
+    .dt-cell.left { justify-content: flex-start; padding-left: 4%; }
+    .dt-cell.muted { color: ${COLORS.STEEL}; }
+    .dt-cell.pct { margin: 0.12%; }
+    .dt-cell.strong { font-size: 1.35vw; }
+    .dt-cell.bar { justify-content: flex-start; padding: 0 1.5% 0 1%; }
+    .bar-wrap { display: flex; align-items: center; width: 100%; height: 100%; gap: 1.5%; }
+    .bar-fill { height: 58%; background: ${COLORS.NAVY_DARK}; flex: 0 0 auto; min-width: 3px; }
+    .bar-fill.top { background: ${COLORS.YELLOW}; box-shadow: inset 0 0 0 2px ${COLORS.NAVY_DARK}; }
+    .bar-label { font-size: 1.25vw; color: ${COLORS.NAVY_DARK}; white-space: nowrap; }
+
+    .data-tiles {
+      position: absolute; top: 6%; left: 3.75%; right: 3.75%; height: 17.5%;
+      display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1.2%;
+    }
+    .data-tile, .hb-tile {
+      background: ${COLORS.WHITE}; border: 1px solid ${COLORS.GRAY_LINE};
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      position: relative; padding: 2% 3%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .data-tile::before, .hb-tile::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 7%; }
+    .data-tile.yellow::before, .hb-tile.yellow::before { background: ${COLORS.YELLOW}; }
+    .data-tile.green::before, .hb-tile.green::before { background: ${COLORS.GREEN_OK}; }
+    .data-tile.red::before, .hb-tile.red::before { background: ${COLORS.RED_ALERT}; }
+    .data-tile.navy::before, .hb-tile.navy::before { background: ${COLORS.NAVY_DARK}; }
+    .data-tile .label, .hb-tile .label {
+      color: ${COLORS.GRAY_MUTED}; font-size: 0.8vw; font-weight: bold; letter-spacing: 0.16em;
+    }
+    .data-tile .value {
+      font-family: 'Arial Black', sans-serif; color: ${COLORS.NAVY_DARK};
+      font-size: 2.7vw; font-weight: 900; line-height: 1.15;
+    }
+    .data-tile .sub, .hb-tile .sub {
+      color: ${COLORS.GRAY_MUTED}; font-size: 0.7vw; font-weight: bold;
+      letter-spacing: 0.1em; text-align: center;
+    }
+    .data-tile.red .sub { color: ${COLORS.RED_ALERT}; }
+    .data-tile.green .sub { color: ${COLORS.GREEN_OK}; }
+
+    .hb-table { top: 6%; left: 3.75%; width: 62.5%; bottom: 9%; }
+    .hb-side {
+      position: absolute; top: 6%; bottom: 9%; left: 67.5%; right: 3.75%;
+      display: flex; flex-direction: column; gap: 2.2%;
+    }
+    .hb-tile { flex: 0 0 22%; }
+    .hb-tile .value {
+      font-family: 'Arial Black', sans-serif; color: ${COLORS.NAVY_DARK};
+      font-size: 3.4vw; font-weight: 900; line-height: 1.1;
+    }
+    .hb-fix {
+      flex: 1; min-height: 0; background: ${COLORS.WHITE};
+      border: 1px solid ${COLORS.GRAY_LINE}; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .hb-fix-head {
+      background: ${COLORS.NAVY_DARK}; color: ${COLORS.YELLOW}; flex: 0 0 auto;
+      font-family: 'Arial Black', sans-serif; font-size: 0.85vw; font-weight: 900;
+      letter-spacing: 0.12em; padding: 2.5% 4%;
+    }
+    .hb-fix-body { flex: 1; min-height: 0; padding: 1.5% 4%; display: flex; flex-direction: column; justify-content: space-evenly; }
+    .hb-fix-row { display: flex; gap: 3%; align-items: baseline; font-size: 0.95vw; line-height: 1.25; }
+    .hb-fix-row .who { font-family: 'Arial Black', sans-serif; font-weight: 900; color: ${COLORS.NAVY_DARK}; flex: 0 0 18%; }
+    .hb-fix-row .what { color: ${COLORS.GRAY_TEXT}; font-weight: bold; }
+    .hb-fix-empty { text-align: center; color: ${COLORS.GREEN_OK}; font-weight: bold; font-size: 1.1vw; margin: auto 0; }
+
+    .dt-wide { top: 26%; left: 3.75%; right: 3.75%; bottom: 9%; }
+    .data-empty {
+      position: absolute; top: 40%; left: 0; right: 0; text-align: center;
+      color: ${COLORS.GRAY_MUTED}; font-size: 1.5vw;
+    }
+
     .progress {
       position: fixed; top: 0; left: 0; right: 0; height: 3px;
       background: rgba(255,208,0,0.2); z-index: 100;
@@ -1184,6 +1280,269 @@ function buildTimeTrackingSlideHTML({ hygiene }, slideLabel) {
   `;
 }
 
+// ---------------------------------------------------------------------------
+// Data slides: HCP buttons (from the HCP Buttons sheet), revenue, estimates
+// ---------------------------------------------------------------------------
+
+function moneyFromCents(cents) {
+  if (!cents || cents < 0) return "$0";
+  return "$" + Math.round(cents / 100).toLocaleString("en-US");
+}
+
+function btnPctClass(p) {
+  if (p == null) return "empty";
+  if (p >= 95) return "green";
+  if (p >= 80) return "yellow";
+  return "red";
+}
+
+function fmtPctCell(p) {
+  return p == null ? "—" : `${p}%`;
+}
+
+function buildHcpButtonsSlideHTML({ hcpButtons }, slideLabel) {
+  const b = hcpButtons;
+
+  // Best compliance first; ties broken by volume so a 2-job 100% doesn't outrank a 20-job 100%.
+  const rows = [...b.last7]
+    .sort((x, y) => (y.all3 ?? -1) - (x.all3 ?? -1) || y.jobs - x.jobs)
+    .slice(0, 16);
+
+  const bodyRows = rows.map((r, i) => `
+    <div class="dt-row body ${i % 2 ? "alt" : ""}">
+      <div class="dt-cell left strong">${escapeHtml(r.display)}</div>
+      <div class="dt-cell muted">${r.jobs}</div>
+      <div class="dt-cell pct ${btnPctClass(r.omw)}">${fmtPctCell(r.omw)}</div>
+      <div class="dt-cell pct ${btnPctClass(r.start)}">${fmtPctCell(r.start)}</div>
+      <div class="dt-cell pct ${btnPctClass(r.finish)}">${fmtPctCell(r.finish)}</div>
+      <div class="dt-cell pct strong ${btnPctClass(r.all3)}">${fmtPctCell(r.all3)}</div>
+      <div class="dt-cell muted">${r.omwToStartMin != null ? `${r.omwToStartMin}m` : "—"}</div>
+    </div>
+  `).join("");
+
+  // "FIX THESE": one line per tech, steps grouped, job numbers only.
+  const fixes = rows
+    .filter(r => r.missing.length > 0)
+    .sort((x, y) => y.missing.length - x.missing.length)
+    .map(r => {
+      const byStep = new Map();
+      for (const m of r.missing) {
+        const step = m.step.toUpperCase();
+        if (!byStep.has(step)) byStep.set(step, []);
+        byStep.get(step).push(`#${m.job}`);
+      }
+      return {
+        who: r.display.toUpperCase(),
+        text: [...byStep].map(([step, jobs]) => `${step} ${jobs.join(" ")}`).join("  ·  "),
+      };
+    });
+  const MAX_FIX = 7;
+  const shownFixes = fixes.slice(0, MAX_FIX);
+  const fixHTML = shownFixes.length === 0
+    ? `<div class="hb-fix-empty">ALL BUTTONS HIT — NOTHING TO FIX</div>`
+    : shownFixes.map(f => `
+        <div class="hb-fix-row"><span class="who">${escapeHtml(f.who)}</span><span class="what">${escapeHtml(f.text)}</span></div>
+      `).join("") + (fixes.length > MAX_FIX
+        ? `<div class="hb-fix-row"><span class="who"></span><span class="what">+ ${fixes.length - MAX_FIX} MORE</span></div>`
+        : "");
+
+  const t7 = b.team7;
+  const today = b.teamToday;
+  const todayValue = today.jobs > 0 ? `${today.jobs} JOBS` : "—";
+  const todaySub = today.jobs > 0
+    ? `OMW ${fmtPctCell(today.omw)}  ·  START ${fmtPctCell(today.start)}  ·  FINISH COUNTS AT DAY END`
+    : "NO JOBS LOGGED YET";
+
+  const perfect = rows.filter(r => r.all3 === 100 && r.jobs >= 5).map(r => r.display.toUpperCase());
+  const bannerText = perfect.length > 0
+    ? `★ PERFECT WEEK (100%, 5+ JOBS):  ${perfect.join("  ·  ")}`
+    : "HIT YOUR BUTTONS — IT'S HOW THIS DATA HAPPENS";
+  const bannerClass = perfect.length > 0 ? "has-leader" : "no-leader";
+
+  const subParts = ["ON MY WAY  →  START  →  FINISH", b.last7Label ? b.last7Label.toUpperCase() : "LAST 7 DAYS"];
+  if (b.updatedLabel) subParts.push(`UPDATED ${b.updatedLabel.toUpperCase()}`);
+
+  return `
+    ${htmlHeader("HCP BUTTONS — LAST 7 DAYS")}
+    <div class="slide-body">
+      <div class="subhead">${escapeHtml(subParts.join("   ·   "))}</div>
+      <div class="dt hb-table" style="--cols: 21% 9% 13% 13% 13% 16% 15%;">
+        <div class="dt-row head">
+          <div class="dt-cell left">TECH</div>
+          <div class="dt-cell">JOBS</div>
+          <div class="dt-cell">ON MY WAY</div>
+          <div class="dt-cell">START</div>
+          <div class="dt-cell">FINISH</div>
+          <div class="dt-cell">ALL 3</div>
+          <div class="dt-cell">OMW→START</div>
+        </div>
+        ${bodyRows}
+      </div>
+      <div class="hb-side">
+        <div class="hb-tile ${btnPctClass(t7.all3)}">
+          <div class="label">TEAM  —  ALL 3 BUTTONS</div>
+          <div class="value">${fmtPctCell(t7.all3)}</div>
+          <div class="sub">${t7.jobs} JOBS  ·  LAST 7 DAYS</div>
+        </div>
+        <div class="hb-tile navy">
+          <div class="label">TODAY SO FAR</div>
+          <div class="value">${escapeHtml(todayValue)}</div>
+          <div class="sub">${escapeHtml(todaySub)}</div>
+        </div>
+        <div class="hb-fix">
+          <div class="hb-fix-head">FIX THESE  —  MISSING BUTTONS, LAST 7 DAYS</div>
+          <div class="hb-fix-body">${fixHTML}</div>
+        </div>
+      </div>
+      <div class="tt-leader ${bannerClass}">${escapeHtml(bannerText)}</div>
+    </div>
+    ${htmlFooter(slideLabel)}
+  `;
+}
+
+function buildRevenueSlideHTML({ revenue }, slideLabel) {
+  const rv = revenue;
+  const p = rv.periods;
+  const delta = rv.weekDeltaPct;
+  const weekSub = delta == null
+    ? "WEEK TO DATE"
+    : `${delta >= 0 ? "UP" : "DOWN"} ${Math.abs(delta)}% VS SAME POINT LAST WEEK`;
+
+  const tiles = [
+    { label: "TODAY",      value: rv.display.today,     sub: `${p.today.jobs} JOBS CLOSED`, cls: "yellow" },
+    { label: "THIS WEEK",  value: rv.display.week,      sub: weekSub, cls: delta != null && delta < 0 ? "red" : "green" },
+    { label: "LAST WEEK",  value: rv.display.lastWeek,  sub: `${p.lastWeek.jobs} JOBS CLOSED`, cls: "navy" },
+    { label: `${rv.monthLabel} TO DATE`, value: rv.display.month, sub: `${p.month.jobs} JOBS CLOSED`, cls: "navy" },
+  ];
+  const tilesHTML = tiles.map(t => `
+    <div class="data-tile ${t.cls}">
+      <div class="label">${escapeHtml(t.label)}</div>
+      <div class="value">${escapeHtml(t.value)}</div>
+      <div class="sub">${escapeHtml(t.sub)}</div>
+    </div>
+  `).join("");
+
+  const rows = rv.byTech.slice(0, 13);
+  const BAR_SPACE = 74; // % of the bar column the longest bar may fill; the rest holds the $ label
+  const bodyRows = rows.map((r, i) => {
+    const w = Math.max(0, (r.week.cents / rv.maxWeekCents) * BAR_SPACE);
+    const isTop = i === 0 && r.week.cents > 0;
+    return `
+      <div class="dt-row body ${i % 2 ? "alt" : ""}">
+        <div class="dt-cell left strong">${escapeHtml(r.name)}</div>
+        <div class="dt-cell bar">
+          <div class="bar-wrap">
+            <div class="bar-fill ${isTop ? "top" : ""}" style="width:${w.toFixed(1)}%"></div>
+            <div class="bar-label">${escapeHtml(r.weekDisplay)}</div>
+          </div>
+        </div>
+        <div class="dt-cell muted">${r.week.jobs}</div>
+        <div class="dt-cell muted">${escapeHtml(r.avgTicketDisplay)}</div>
+        <div class="dt-cell muted">${escapeHtml(moneyFromCents(r.lastWeek.cents))}</div>
+        <div class="dt-cell muted">${escapeHtml(r.monthDisplay)}</div>
+      </div>
+    `;
+  }).join("");
+
+  const top = rows[0];
+  let bannerText;
+  let bannerClass;
+  if (top && top.week.cents > 0) {
+    bannerClass = "has-leader";
+    bannerText = `★ TOP TRUCK THIS WEEK:  ${top.name.toUpperCase()}  —  ${top.weekDisplay}`;
+    if (rv.otherWeekCents > 0) bannerText += `     ·     ${rv.otherWeekDisplay} FROM OTHER JOBS`;
+  } else {
+    bannerClass = "no-leader";
+    bannerText = "REVENUE POSTS WHEN THE JOB IS FINISHED — HIT FINISH";
+  }
+
+  const body = rows.length === 0
+    ? `<div class="data-empty">(no completed jobs yet this month)</div>`
+    : `
+      <div class="dt dt-wide" style="--cols: 14% 40% 9% 13% 12.5% 11.5%;">
+        <div class="dt-row head">
+          <div class="dt-cell left">TRUCK</div>
+          <div class="dt-cell">THIS WEEK</div>
+          <div class="dt-cell">JOBS</div>
+          <div class="dt-cell">AVG TICKET</div>
+          <div class="dt-cell">LAST WEEK</div>
+          <div class="dt-cell">${escapeHtml(rv.monthLabel)}</div>
+        </div>
+        ${bodyRows}
+      </div>`;
+
+  return `
+    ${htmlHeader("REVENUE BY TRUCK")}
+    <div class="slide-body">
+      <div class="subhead">COMPLETED JOBS  ·  CREDITED TO THE LEAD TECH  ·  EACH TECH = ONE TRUCK</div>
+      <div class="data-tiles">${tilesHTML}</div>
+      ${body}
+      <div class="tt-leader ${bannerClass}">${escapeHtml(bannerText)}</div>
+    </div>
+    ${htmlFooter(slideLabel)}
+  `;
+}
+
+function buildEstimatesSlideHTML({ estimates }, slideLabel) {
+  const e = estimates;
+  const t = e.team;
+
+  const tiles = [
+    { label: "ESTIMATES SENT", value: String(t.sent),           sub: `PRICED, LAST ${e.daysBack} DAYS`, cls: "navy" },
+    { label: "WON",            value: String(t.won),            sub: `${t.open} STILL OPEN`, cls: "green" },
+    { label: "WIN RATE",       value: fmtPctCell(t.winPct),     sub: "WON ÷ SENT", cls: "yellow" },
+    { label: "SOLD",           value: moneyFromCents(t.wonCents), sub: `${moneyFromCents(t.openCents)} STILL OUT THERE`, cls: "green" },
+  ];
+  const tilesHTML = tiles.map(x => `
+    <div class="data-tile ${x.cls}">
+      <div class="label">${escapeHtml(x.label)}</div>
+      <div class="value">${escapeHtml(x.value)}</div>
+      <div class="sub">${escapeHtml(x.sub)}</div>
+    </div>
+  `).join("");
+
+  const rows = e.byTech.slice(0, 13);
+  const bodyRows = rows.map((r, i) => `
+    <div class="dt-row body ${i % 2 ? "alt" : ""}">
+      <div class="dt-cell left strong">${escapeHtml(r.name)}</div>
+      <div class="dt-cell muted">${r.sent}</div>
+      <div class="dt-cell muted">${r.won}</div>
+      <div class="dt-cell strong">${fmtPctCell(r.winPct)}</div>
+      <div class="dt-cell">${escapeHtml(r.wonDisplay)}</div>
+      <div class="dt-cell muted">${escapeHtml(r.openDisplay)}</div>
+    </div>
+  `).join("");
+
+  // Don't crown someone on one lucky estimate.
+  const eligible = e.byTech.filter(r => r.sent >= 3 && r.winPct != null);
+  const best = [...eligible].sort((a, b) => b.winPct - a.winPct || b.wonCents - a.wonCents)[0];
+  const bannerText = best
+    ? `★ BEST WIN RATE (3+ ESTIMATES):  ${best.name.toUpperCase()}  —  ${best.winPct}%`
+    : "PRICE IT, SEND IT, FOLLOW UP";
+  const bannerClass = best ? "has-leader" : "no-leader";
+
+  return `
+    ${htmlHeader(`ESTIMATES — LAST ${e.daysBack} DAYS`)}
+    <div class="slide-body">
+      <div class="subhead">PRICED ESTIMATES  ·  CREDITED TO THE LEAD TECH  ·  UNPRICED ONES AREN'T COUNTED</div>
+      <div class="data-tiles">${tilesHTML}</div>
+      <div class="dt dt-wide" style="--cols: 18% 12% 12% 16% 22% 20%;">
+        <div class="dt-row head">
+          <div class="dt-cell left">TECH</div>
+          <div class="dt-cell">SENT</div>
+          <div class="dt-cell">WON</div>
+          <div class="dt-cell">WIN RATE</div>
+          <div class="dt-cell">SOLD</div>
+          <div class="dt-cell">STILL OPEN</div>
+        </div>
+        ${bodyRows}
+      </div>
+      <div class="tt-leader ${bannerClass}">${escapeHtml(bannerText)}</div>
+    </div>
+    ${htmlFooter(slideLabel)}
+  `;
+}
+
 function buildSafetySlideHTML({ safetyTopic }, slideLabel) {
   const bullets = (safetyTopic.bullets || []);
   const bulletHTML = bullets.length > 0
@@ -1447,8 +1806,10 @@ export async function renderHTML(data, outputPath) {
   plan.push({ key: "newitems",     label: "NEW ITEMS" });
   plan.push({ key: "reviews",      label: "REVIEWS" });
   plan.push({ key: "jobboard",     label: "JOB BOARD" });
+  if (data.revenue)   plan.push({ key: "revenue",   label: "REVENUE" });
+  if (data.estimates) plan.push({ key: "estimates", label: "ESTIMATES" });
   plan.push({ key: "tagdurations", label: "AVG TIMES" });
-  plan.push({ key: "hygiene",      label: "TIME TRACKING" });
+  plan.push({ key: "hygiene",      label: data.hcpButtons ? "HCP BUTTONS" : "TIME TRACKING" });
   if (data.safetyTopic) plan.push({ key: "safety",   label: "SAFETY" });
   if (data.shoutout)    plan.push({ key: "shoutout", label: "SHOUTOUT" });
   plan.push({ key: "serviceareas", label: "SERVICE AREAS" });
@@ -1487,11 +1848,21 @@ export async function renderHTML(data, outputPath) {
       case "jobboard":
         inner = buildJobBoardSlideHTML({ jobBoard: data.jobBoard }, labelStr);
         break;
+      case "revenue":
+        inner = buildRevenueSlideHTML({ revenue: data.revenue }, labelStr);
+        break;
+      case "estimates":
+        inner = buildEstimatesSlideHTML({ estimates: data.estimates }, labelStr);
+        break;
       case "tagdurations":
         inner = buildTagDurationsSlideHTML({ tagDurations: data.tagDurations }, labelStr);
         break;
       case "hygiene":
-        inner = buildTimeTrackingSlideHTML({ hygiene: data.hygiene }, labelStr);
+        // Prefer the HCP Buttons sheet; fall back to the API-computed slide if
+        // the sheet couldn't be read this run.
+        inner = data.hcpButtons
+          ? buildHcpButtonsSlideHTML({ hcpButtons: data.hcpButtons }, labelStr)
+          : buildTimeTrackingSlideHTML({ hygiene: data.hygiene }, labelStr);
         break;
       case "safety":
         inner = buildSafetySlideHTML({ safetyTopic: data.safetyTopic }, labelStr);
