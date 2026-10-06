@@ -11,6 +11,8 @@
 //   * A job counts for EVERY tech assigned to it (a 2-man job is 1 job for each),
 //     and "average job size" is the average total of the jobs they were on —
 //     not revenue credited to them (that is what the Revenue slide does).
+//   * Callbacks = jobs carrying the "Callback" tag that the tech was assigned to
+//     (the return visit they ran, whoever did the original work).
 //   * On-job hours = Start → Finish. Travel hours = On My Way → Start.
 //     HCP stamps these once per JOB, not per visit, so a multi-day job or a
 //     forgotten Finish button would produce nonsense hours. Those jobs still
@@ -24,7 +26,7 @@ import fs from "fs";
 import path from "path";
 import { TIME_TRACKING_TECHS } from "./jobs.js";
 import { etDateKey, addDaysKey } from "./dates.js";
-import { pullAllJobs, COMPLETE_STATUSES, jobDoneAt } from "./hcp-pull.js";
+import { pullAllJobs, COMPLETE_STATUSES, jobDoneAt, isCallbackJob } from "./hcp-pull.js";
 
 export const MAX_ONJOB_HOURS = 12;
 export const MAX_TRAVEL_HOURS = 3;
@@ -43,7 +45,7 @@ export function rollupTechYear(jobs, { now = new Date() } = {}) {
   const today = etDateKey(now);
   const yearStart = `${today.slice(0, 4)}-01-01`;
 
-  const blank = () => ({ jobs: 0, cents: 0, onJobHours: 0, travelHours: 0, hoursJobs: 0, travelJobs: 0 });
+  const blank = () => ({ jobs: 0, callbacks: 0, cents: 0, onJobHours: 0, travelHours: 0, hoursJobs: 0, travelJobs: 0 });
   const rows = new Map(TIME_TRACKING_TECHS.map(t => [t.id, { id: t.id, name: t.display, ...blank() }]));
   const skipped = { onJob: 0, travel: 0 };
   let completedJobs = 0;
@@ -57,6 +59,7 @@ export function rollupTechYear(jobs, { now = new Date() } = {}) {
     const ids = [...new Set((j.assigned_employees || []).map(e => e.id))].filter(id => rows.has(id));
     if (ids.length === 0) continue;
 
+    const cb = isCallbackJob(j);
     const { on_my_way_at: omw, started_at: started, completed_at: done } = j.work_timestamps || {};
 
     let onJobH = null;
@@ -77,6 +80,7 @@ export function rollupTechYear(jobs, { now = new Date() } = {}) {
       const r = rows.get(id);
       r.jobs += 1;
       r.cents += j.total_amount || 0;
+      if (cb) r.callbacks += 1;
       if (onJobH != null) { r.onJobHours += onJobH; r.hoursJobs += 1; }
       if (travelH != null) { r.travelHours += travelH; r.travelJobs += 1; }
     }

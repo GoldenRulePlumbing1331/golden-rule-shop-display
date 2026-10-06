@@ -1247,6 +1247,7 @@ function buildTechYearSlideHTML({ techYear }, slideLabel) {
       <div class="dt-cell">${r.hoursPerJob != null ? r.hoursPerJob.toFixed(1) : "—"}</div>
       <div class="dt-cell strong ${r.onJobHours === lead.onJob ? "lead" : ""}">${fmtInt(r.onJobHours)}</div>
       <div class="dt-cell strong ${r.travelHours === lead.travel ? "lead" : ""}">${fmtInt(r.travelHours)}</div>
+      <div class="dt-cell strong">${fmtInt(r.callbacks ?? 0)}</div>
     </div>
   `).join("");
 
@@ -1258,7 +1259,7 @@ function buildTechYearSlideHTML({ techYear }, slideLabel) {
     ${htmlHeader(`TECH STATS — ${year} YEAR TO DATE`)}
     <div class="slide-body">
       <div class="subhead">COMPLETED JOBS  ·  A JOB COUNTS FOR EVERY TECH ON IT  ·  UPDATED WEEKLY  ·  AS OF ${escapeHtml(asOf)}</div>
-      <div class="dt dt-wide" style="--cols: 18% 14% 20% 16% 16% 16%; top: 6%;">
+      <div class="dt dt-wide" style="--cols: 16% 13% 16% 12% 15% 14% 14%; top: 6%;">
         <div class="dt-row head">
           <div class="dt-cell left">TECH</div>
           <div class="dt-cell">JOB COUNT</div>
@@ -1266,10 +1267,11 @@ function buildTechYearSlideHTML({ techYear }, slideLabel) {
           <div class="dt-cell">HRS / JOB</div>
           <div class="dt-cell">ON-JOB HRS</div>
           <div class="dt-cell">TRAVEL HRS</div>
+          <div class="dt-cell">CALLBACKS</div>
         </div>
         ${bodyRows}
       </div>
-      <div class="footer-banner" style="font-size: 0.8vw;">HOURS COME FROM THE ON MY WAY / START / FINISH BUTTONS  ·  MULTI-DAY JOBS AND MISSED BUTTONS ARE LEFT OUT OF HOURS</div>
+      <div class="footer-banner" style="font-size: 0.8vw;">HOURS COME FROM THE ON MY WAY / START / FINISH BUTTONS  ·  MULTI-DAY JOBS AND MISSED BUTTONS ARE LEFT OUT OF HOURS  ·  CALLBACKS = JOBS TAGGED CALLBACK</div>
     </div>
     ${htmlFooter(slideLabel)}
   `;

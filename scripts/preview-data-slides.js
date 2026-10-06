@@ -53,6 +53,7 @@ for (let dayBack = 0; dayBack < 280; dayBack++) {
           completed_at: new Date(start.getTime() + onJobH * 3600000).toISOString(),
         },
         assigned_employees: crew,
+        tags: rnd() < 0.03 ? [{ name: "Callback" }] : [],
       });
     }
   }
