@@ -21,11 +21,12 @@ export function splitCsvLine(line) {
   return out;
 }
 
-// Pulls the Dashboard tab out of the text export as rows of cells.
-export function dashboardRowsFromExport(text) {
+// Pulls one tab out of the text export as rows of cells.
+export function tabRowsFromExport(text, tabName) {
   const lines = text.split(/\r?\n/);
-  const start = lines.findIndex(l => /^## Sheet name: Dashboard/i.test(l));
-  if (start === -1) throw new Error("No Dashboard tab found in export");
+  const header = new RegExp(`^## Sheet name: ${tabName}\\s*$`, "i");
+  const start = lines.findIndex(l => header.test(l));
+  if (start === -1) throw new Error(`No "${tabName}" tab found in export`);
   const rows = [];
   for (let i = start + 1; i < lines.length; i++) {
     if (/^## Sheet name:/i.test(lines[i])) break;
@@ -33,3 +34,6 @@ export function dashboardRowsFromExport(text) {
   }
   return rows;
 }
+
+export const dashboardRowsFromExport = text => tabRowsFromExport(text, "Dashboard");
+export const techsRowsFromExport = text => tabRowsFromExport(text, "Techs");

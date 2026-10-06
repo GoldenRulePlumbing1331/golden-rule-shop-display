@@ -19,30 +19,14 @@ const COLORS = {
 };
 
 const SLIDE_TIMINGS = {
-  cover:        8,
   oncall:       12,
-  events:       15,
-  newitems:     15,
-  reviews:      18,
-  jobboard:     20,
-  revenue:      22,
-  estimates:    18,
-  tagdurations: 20,
-  hygiene:      25,
-  safety:       18,
-  shoutout:     12,
-  serviceareas: 18,
   kpis:         20,
+  revenue:      22,
+  buttons:      22,
+  areas:        22,
+  tagdurations: 18,
+  techyear:     25,
 };
-
-let logoDataUri = null;
-try {
-  const logoPath = path.resolve("assets/logo.png");
-  const buf = fs.readFileSync(logoPath);
-  logoDataUri = "data:image/png;base64," + buf.toString("base64");
-} catch (e) {
-  console.warn("[render-html] Could not load assets/logo.png — Error:", e.message);
-}
 
 function escapeHtml(s) {
   if (s == null) return "";
@@ -64,26 +48,6 @@ function formatPhone(raw) {
     return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
   }
   return raw;
-}
-
-function fmtEventDate(isoOrDateStr) {
-  if (!isoOrDateStr) return { day: "", date: "" };
-  const isoDay = isoOrDateStr.slice(0, 10);
-  const [y, m, d] = isoDay.split("-").map(Number);
-  const local = new Date(y, m - 1, d);
-  const day = new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(local).toUpperCase();
-  const date = String(d);
-  return { day, date };
-}
-
-function eventTagColor(category) {
-  const map = {
-    MEETING:   COLORS.NAVY,
-    OPS:       COLORS.STEEL,
-    REQUIRED:  COLORS.RED_ALERT,
-    COMMUNITY: COLORS.GREEN_OK,
-  };
-  return map[(category || "").toUpperCase()] || COLORS.NAVY;
 }
 
 function buildCSS() {
@@ -894,6 +858,30 @@ function buildCSS() {
       color: ${COLORS.GRAY_MUTED}; font-size: 1.5vw;
     }
 
+    /* ---- Extra table styling for the comparison / stats slides ---- */
+    .dt-row.group { flex: 0 0 4.4%; }
+    .dt-row.group .dt-cell {
+      background: ${COLORS.NAVY}; color: ${COLORS.WHITE};
+      font-size: 0.85vw; letter-spacing: 0.14em;
+      border-right: 1px solid ${COLORS.NAVY_DARK};
+    }
+    .dt-row.group .dt-cell.g30 { background: ${COLORS.STEEL}; }
+    .dt-row.total { background: ${COLORS.STEEL_LIGHT}; border-top: 3px solid ${COLORS.NAVY_DARK}; }
+    .dt-cell.up { color: ${COLORS.GREEN_OK}; }
+    .dt-cell.down { color: ${COLORS.RED_ALERT}; }
+    .dt-cell.flat { color: ${COLORS.GRAY_MUTED}; }
+    .dt-cell.dim { color: ${COLORS.GRAY_MUTED}; }
+    .dt-cell.lead { background: ${COLORS.YELLOW}; margin: 0.12%; }
+    .tt-leader.stale { background: ${COLORS.RED_ALERT}; color: ${COLORS.WHITE}; }
+    .subhead .flag { color: ${COLORS.RED_ALERT}; }
+    .hb-note {
+      flex: 1; min-height: 0; background: ${COLORS.WHITE};
+      border: 1px solid ${COLORS.GRAY_LINE}; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 4%; display: flex; flex-direction: column; justify-content: center; gap: 4%;
+    }
+    .hb-note .label { color: ${COLORS.GRAY_MUTED}; font-size: 0.8vw; font-weight: bold; letter-spacing: 0.14em; }
+    .hb-note .text { font-family: 'Arial Black', sans-serif; font-weight: 900; color: ${COLORS.NAVY_DARK}; font-size: 1.15vw; line-height: 1.3; }
+
     .progress {
       position: fixed; top: 0; left: 0; right: 0; height: 3px;
       background: rgba(255,208,0,0.2); z-index: 100;
@@ -921,28 +909,6 @@ function htmlFooter(slideLabel) {
     <div class="footer-bar">
       <div class="left">GOLDENRULEPH.COM  •  1331 POTTSTOWN PIKE, WEST CHESTER PA</div>
       <div class="right">${escapeHtml(slideLabel)}</div>
-    </div>
-  `;
-}
-
-function buildCoverSlideHTML({ weekHumanLabel, onCall }) {
-  const dispatcher = onCall?.current?.dispatcher || "[ NOT SET ]";
-  const materialRuns = onCall?.current?.materialRuns || "[ NOT SET ]";
-  const logoBg = logoDataUri ? `style="background-image: url('${logoDataUri}');"` : "";
-  return `
-    <div class="cover">
-      <div class="top-stripe"></div>
-      <div class="corp-tag">GOLDEN RULE PLUMBING & CONTRACTING</div>
-      <div class="logo" ${logoBg}></div>
-      <div class="headline">
-        <div class="shop">SHOP</div>
-        <div class="briefing">BRIEFING</div>
-      </div>
-      <div class="week-of">WEEK OF  ${escapeHtml(weekHumanLabel.toUpperCase())}</div>
-      <div class="city">WEST CHESTER, PA</div>
-      <div class="bottom-bar">
-        DISPATCH:&nbsp;&nbsp;${escapeHtml(dispatcher.toUpperCase())}&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;MATERIAL RUNS:&nbsp;&nbsp;${escapeHtml(materialRuns.toUpperCase())}
-      </div>
     </div>
   `;
 }
@@ -989,177 +955,6 @@ function buildOnCallSlideHTML({ onCall }, slideLabel) {
   `;
 }
 
-function buildEventsSlideHTML({ events }, slideLabel) {
-  const cards = events.slice(0, 8).map(e => {
-    const { day, date } = fmtEventDate(e.startISO);
-    return {
-      day, date,
-      title: (e.title || "").toUpperCase(),
-      time: e.location || "",
-    };
-  });
-  while (cards.length < 8) {
-    cards.push({ day: "—", date: "", title: "(no event)", time: "" });
-  }
-  const cardHTML = cards.map(c => `
-    <div class="event-card">
-      <div class="date-block">
-        <div class="day">${escapeHtml(c.day)}</div>
-        <div class="date">${escapeHtml(c.date)}</div>
-      </div>
-      <div class="info">
-        <div class="title">${escapeHtml(c.title)}</div>
-        <div class="time">${escapeHtml(c.time)}</div>
-      </div>
-    </div>
-  `).join("");
-  return `
-    ${htmlHeader("UPCOMING EVENTS & DEADLINES")}
-    <div class="slide-body">
-      <div class="events-grid">${cardHTML}</div>
-    </div>
-    ${htmlFooter(slideLabel)}
-  `;
-}
-
-function buildNewItemsSlideHTML({ newItems }, slideLabel) {
-  const cards = [...newItems];
-  while (cards.length < 3) cards.push(null);
-  const cardHTML = cards.slice(0, 3).map(it => {
-    if (!it) {
-      return `
-        <div class="new-item-card">
-          <div class="photo-area"></div>
-          <div class="body">
-            <div class="name">(no new item)</div>
-          </div>
-        </div>
-      `;
-    }
-    return `
-      <div class="new-item-card">
-        <div class="photo-area">
-          <div class="new-badge">NEW</div>
-        </div>
-        <div class="body">
-          <div class="name">${escapeHtml(it.name.toUpperCase())}</div>
-          <div class="category">${escapeHtml(it.category || "")}</div>
-          <div class="location-label">📍 LOCATION</div>
-          <div class="location">${escapeHtml(it.location || "—")}</div>
-          <div class="notes">${escapeHtml(it.notes || "")}</div>
-        </div>
-      </div>
-    `;
-  }).join("");
-  return `
-    ${htmlHeader("NEW IN THE SHOP")}
-    <div class="slide-body">
-      <div class="subhead">RECENTLY ADDED — KNOW WHERE TO FIND IT, KNOW HOW TO USE IT</div>
-      <div class="new-items-grid">${cardHTML}</div>
-    </div>
-    ${htmlFooter(slideLabel)}
-  `;
-}
-
-function buildReviewsSlideHTML({ googleReviews }, slideLabel) {
-  const reviews = (googleReviews || []).slice(0, 3);
-
-  if (reviews.length === 0) {
-    return `
-      ${htmlHeader("5-STAR REVIEWS — WHAT CUSTOMERS ARE SAYING")}
-      <div class="slide-body">
-        <div style="text-align:center; margin-top: 25%; color: ${COLORS.GRAY_MUTED}; font-size: 1.4vw; font-style: italic;">
-          (no featured reviews — add to the google_reviews sheet)
-        </div>
-      </div>
-      ${htmlFooter(slideLabel)}
-    `;
-  }
-
-  const renderStars = (count) => {
-    let s = "";
-    for (let i = 0; i < 5; i++) {
-      s += i < count ? "★" : `<span class="gray">★</span>`;
-    }
-    return s;
-  };
-
-  const cardHTML = reviews.map(r => {
-    const customerLine = r.location
-      ? `— ${escapeHtml(r.customerName)}, ${escapeHtml(r.location)}`
-      : `— ${escapeHtml(r.customerName)}`;
-    const techPraise = r.techDisplay
-      ? `<div class="tech-praise">👏 PRAISED: ${escapeHtml(r.techDisplay.toUpperCase())}</div>`
-      : "";
-    return `
-      <div class="review-card">
-        <div class="top-row">
-          <div class="quote-icon">"</div>
-          <div class="text">${escapeHtml(r.text)}</div>
-          <div class="stars">${renderStars(r.stars)}</div>
-        </div>
-        <div class="bottom-row">
-          <div class="customer">${customerLine}</div>
-          ${techPraise}
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  return `
-    ${htmlHeader("5-STAR REVIEWS — WHAT CUSTOMERS ARE SAYING")}
-    <div class="slide-body">
-      <div class="reviews-list">${cardHTML}</div>
-      <div class="reviews-banner">THIS IS WHAT 5-STAR WORK LOOKS LIKE  —  KEEP IT UP</div>
-    </div>
-    ${htmlFooter(slideLabel)}
-  `;
-}
-
-function buildJobBoardSlideHTML({ jobBoard }, slideLabel) {
-  const days = ["MON", "TUE", "WED", "THU", "FRI"];
-  const counts = jobBoard?.counts || { open: 0, inProgress: 0, total: 0 };
-  const breakdown = jobBoard?.breakdown || { service: 0, install: 0, estimate: 0, other: 0 };
-
-  const rowHTML = days.map((day, i) => {
-    const j = jobBoard?.majors?.[day] || null;
-    const altClass = i % 2 === 0 ? "alt" : "";
-    return `
-      <div class="job-row ${altClass}">
-        <div class="day-pill">${day}</div>
-        <div class="desc">
-          <div class="label">${j ? "TOP JOB" : ""}</div>
-          <div class="text">${escapeHtml(j ? j.description.slice(0, 60) : "(no scheduled work)")}</div>
-        </div>
-        <div class="tech">${escapeHtml(j ? j.techDisplay : "")}</div>
-        <div class="duration">${escapeHtml(j ? j.durationLabel : "")}</div>
-      </div>
-    `;
-  }).join("");
-
-  return `
-    ${htmlHeader("THIS WEEK'S JOB BOARD")}
-    <div class="slide-body">
-      <div class="jobboard-left">
-        <div class="header">MAJOR JOBS — THIS WEEK</div>
-        <div class="jobboard-rows">${rowHTML}</div>
-        <div class="jobboard-totals">
-          <div class="cell"><div class="label">SERVICE</div><div class="value">${breakdown.service}</div></div>
-          <div class="cell"><div class="label">INSTALLS</div><div class="value">${breakdown.install}</div></div>
-          <div class="cell"><div class="label">ESTIMATES</div><div class="value">${breakdown.estimate}</div></div>
-          <div class="cell"><div class="label">OTHER</div><div class="value">${breakdown.other}</div></div>
-        </div>
-      </div>
-      <div class="jobboard-right">
-        <div class="stat-card yellow"><div class="label">OPEN JOBS</div><div class="value">${counts.open}</div></div>
-        <div class="stat-card navy"><div class="label">IN PROGRESS</div><div class="value">${counts.inProgress}</div></div>
-        <div class="stat-card red"><div class="label">TOTAL THIS WK</div><div class="value">${counts.total}</div></div>
-      </div>
-    </div>
-    ${htmlFooter(slideLabel)}
-  `;
-}
-
 function buildTagDurationsSlideHTML({ tagDurations }, slideLabel) {
   const rows = (tagDurations || []).slice(0, 8);
   while (rows.length < 8) rows.push(null);
@@ -1188,98 +983,6 @@ function buildTagDurationsSlideHTML({ tagDurations }, slideLabel) {
   `;
 }
 
-function buildTimeTrackingSlideHTML({ hygiene }, slideLabel) {
-  if (!hygiene || !hygiene.last7 || hygiene.last7.length === 0) {
-    return `
-      ${htmlHeader("TIME TRACKING — HCP BUTTONS")}
-      <div class="slide-body">
-        <div style="text-align:center; margin-top: 30%; color: ${COLORS.GRAY_MUTED}; font-size: 1.5vw;">
-          (no compliance data available)
-        </div>
-      </div>
-      ${htmlFooter(slideLabel)}
-    `;
-  }
-
-  const techMap = new Map();
-  for (const r of hygiene.last30) techMap.set(r.employeeId, { d30: r, d7: null });
-  for (const r of hygiene.last7) {
-    if (techMap.has(r.employeeId)) {
-      techMap.get(r.employeeId).d7 = r;
-    } else {
-      techMap.set(r.employeeId, { d30: null, d7: r });
-    }
-  }
-  const allRows = [...techMap.values()];
-  allRows.sort((a, b) => {
-    const aPct = a.d30?.overallPct ?? -1;
-    const bPct = b.d30?.overallPct ?? -1;
-    return bPct - aPct;
-  });
-
-  const pctClass = (pct) => {
-    if (pct === null) return "empty";
-    if (pct >= 95) return "green";
-    if (pct >= 80) return "yellow";
-    return "red";
-  };
-  const fmtPct = (pct) => pct === null ? "—" : `${pct}%`;
-
-  const drawTriple = (stats) => {
-    const pcts = stats ? [stats.omwPct, stats.startPct, stats.finishPct] : [null, null, null];
-    return pcts.map(p => `<div class="tt-cell pct ${pctClass(p)}">${fmtPct(p)}</div>`).join("");
-  };
-
-  const bodyRows = allRows.slice(0, 11).map((row, i) => {
-    const altClass = i % 2 ? "alt" : "";
-    const displayName = row.d30?.displayName || row.d7?.displayName || "—";
-    const ledCount = row.d7?.totalJobs ?? "—";
-    const assignedCount = row.d7?.totalAssigned ?? "—";
-    return `
-      <div class="tt-row body ${altClass}">
-        <div class="tt-name">${escapeHtml(displayName)}</div>
-        <div class="tt-block">${drawTriple(row.d30)}</div>
-        <div class="tt-block">${drawTriple(row.d7)}</div>
-        <div class="tt-led">${ledCount}</div>
-        <div class="tt-assigned">${assignedCount}</div>
-      </div>
-    `;
-  }).join("");
-
-  const leader = hygiene.leader;
-  const flagged = hygiene.flagged || [];
-  let leaderText, leaderClass;
-  if (leader) {
-    leaderClass = "has-leader";
-    leaderText = `★ THIS WEEK'S LEADER:  ${leader.displayName.toUpperCase()}  —  ${leader.overallPct}%  OVERALL`;
-    if (flagged.length > 0) {
-      leaderText += `     ·     ${flagged.length} TECH${flagged.length > 1 ? "S" : ""} BELOW 80% (30-DAY)`;
-    }
-  } else {
-    leaderClass = "no-leader";
-    leaderText = "HIT YOUR BUTTONS — IT'S HOW THIS DATA HAPPENS";
-  }
-
-  return `
-    ${htmlHeader("TIME TRACKING — HCP BUTTONS")}
-    <div class="slide-body">
-      <div class="subhead">EACH BLOCK READS:  ON MY WAY  →  START  →  FINISH  ·  COMPLIANCE BY TECH</div>
-      <div class="tt-table">
-        <div class="tt-row head">
-          <div class="tt-cell">TECH</div>
-          <div class="tt-cell center banner-30">LAST 30 DAYS</div>
-          <div class="tt-cell center banner-7">LAST 7 DAYS</div>
-          <div class="tt-cell center">LED <span style="font-size: 0.7em; opacity: 0.8;">(7D)</span></div>
-          <div class="tt-cell center">ASSIGNED <span style="font-size: 0.7em; opacity: 0.8;">(7D)</span></div>
-        </div>
-        ${bodyRows}
-      </div>
-      <div class="tt-leader ${leaderClass}">${escapeHtml(leaderText)}</div>
-    </div>
-    ${htmlFooter(slideLabel)}
-  `;
-}
-
 // ---------------------------------------------------------------------------
 // Data slides: HCP buttons (from the HCP Buttons sheet), revenue, estimates
 // ---------------------------------------------------------------------------
@@ -1300,104 +1003,16 @@ function fmtPctCell(p) {
   return p == null ? "—" : `${p}%`;
 }
 
-function buildHcpButtonsSlideHTML({ hcpButtons }, slideLabel) {
-  const b = hcpButtons;
+// Up/down cell for a change in count: ▲ +3 (green), ▼ −2 (red), — (flat).
+function deltaCell(n) {
+  if (n > 0) return { text: `▲ +${n}`, cls: "up" };
+  if (n < 0) return { text: `▼ −${Math.abs(n)}`, cls: "down" };
+  return { text: "—", cls: "flat" };
+}
 
-  // Best compliance first; ties broken by volume so a 2-job 100% doesn't outrank a 20-job 100%.
-  const rows = [...b.last7]
-    .sort((x, y) => (y.all3 ?? -1) - (x.all3 ?? -1) || y.jobs - x.jobs)
-    .slice(0, 16);
-
-  const bodyRows = rows.map((r, i) => `
-    <div class="dt-row body ${i % 2 ? "alt" : ""}">
-      <div class="dt-cell left strong">${escapeHtml(r.display)}</div>
-      <div class="dt-cell muted">${r.jobs}</div>
-      <div class="dt-cell pct ${btnPctClass(r.omw)}">${fmtPctCell(r.omw)}</div>
-      <div class="dt-cell pct ${btnPctClass(r.start)}">${fmtPctCell(r.start)}</div>
-      <div class="dt-cell pct ${btnPctClass(r.finish)}">${fmtPctCell(r.finish)}</div>
-      <div class="dt-cell pct strong ${btnPctClass(r.all3)}">${fmtPctCell(r.all3)}</div>
-      <div class="dt-cell muted">${r.omwToStartMin != null ? `${r.omwToStartMin}m` : "—"}</div>
-    </div>
-  `).join("");
-
-  // "FIX THESE": one line per tech, steps grouped, job numbers only.
-  const fixes = rows
-    .filter(r => r.missing.length > 0)
-    .sort((x, y) => y.missing.length - x.missing.length)
-    .map(r => {
-      const byStep = new Map();
-      for (const m of r.missing) {
-        const step = m.step.toUpperCase();
-        if (!byStep.has(step)) byStep.set(step, []);
-        byStep.get(step).push(`#${m.job}`);
-      }
-      return {
-        who: r.display.toUpperCase(),
-        text: [...byStep].map(([step, jobs]) => `${step} ${jobs.join(" ")}`).join("  ·  "),
-      };
-    });
-  const MAX_FIX = 7;
-  const shownFixes = fixes.slice(0, MAX_FIX);
-  const fixHTML = shownFixes.length === 0
-    ? `<div class="hb-fix-empty">ALL BUTTONS HIT — NOTHING TO FIX</div>`
-    : shownFixes.map(f => `
-        <div class="hb-fix-row"><span class="who">${escapeHtml(f.who)}</span><span class="what">${escapeHtml(f.text)}</span></div>
-      `).join("") + (fixes.length > MAX_FIX
-        ? `<div class="hb-fix-row"><span class="who"></span><span class="what">+ ${fixes.length - MAX_FIX} MORE</span></div>`
-        : "");
-
-  const t7 = b.team7;
-  const today = b.teamToday;
-  const todayValue = today.jobs > 0 ? `${today.jobs} JOBS` : "—";
-  const todaySub = today.jobs > 0
-    ? `OMW ${fmtPctCell(today.omw)}  ·  START ${fmtPctCell(today.start)}  ·  FINISH COUNTS AT DAY END`
-    : "NO JOBS LOGGED YET";
-
-  const perfect = rows.filter(r => r.all3 === 100 && r.jobs >= 5).map(r => r.display.toUpperCase());
-  const bannerText = perfect.length > 0
-    ? `★ PERFECT WEEK (100%, 5+ JOBS):  ${perfect.join("  ·  ")}`
-    : "HIT YOUR BUTTONS — IT'S HOW THIS DATA HAPPENS";
-  const bannerClass = perfect.length > 0 ? "has-leader" : "no-leader";
-
-  const subParts = ["ON MY WAY  →  START  →  FINISH", b.last7Label ? b.last7Label.toUpperCase() : "LAST 7 DAYS"];
-  if (b.updatedLabel) subParts.push(`UPDATED ${b.updatedLabel.toUpperCase()}`);
-
-  return `
-    ${htmlHeader("HCP BUTTONS — LAST 7 DAYS")}
-    <div class="slide-body">
-      <div class="subhead">${escapeHtml(subParts.join("   ·   "))}</div>
-      <div class="dt hb-table" style="--cols: 21% 9% 13% 13% 13% 16% 15%;">
-        <div class="dt-row head">
-          <div class="dt-cell left">TECH</div>
-          <div class="dt-cell">JOBS</div>
-          <div class="dt-cell">ON MY WAY</div>
-          <div class="dt-cell">START</div>
-          <div class="dt-cell">FINISH</div>
-          <div class="dt-cell">ALL 3</div>
-          <div class="dt-cell">OMW→START</div>
-        </div>
-        ${bodyRows}
-      </div>
-      <div class="hb-side">
-        <div class="hb-tile ${btnPctClass(t7.all3)}">
-          <div class="label">TEAM  —  ALL 3 BUTTONS</div>
-          <div class="value">${fmtPctCell(t7.all3)}</div>
-          <div class="sub">${t7.jobs} JOBS  ·  LAST 7 DAYS</div>
-        </div>
-        <div class="hb-tile navy">
-          <div class="label">TODAY SO FAR</div>
-          <div class="value">${escapeHtml(todayValue)}</div>
-          <div class="sub">${escapeHtml(todaySub)}</div>
-        </div>
-        <div class="hb-fix">
-          <div class="hb-fix-head">FIX THESE  —  MISSING BUTTONS, LAST 7 DAYS</div>
-          <div class="hb-fix-body">${fixHTML}</div>
-        </div>
-      </div>
-      <div class="tt-leader ${bannerClass}">${escapeHtml(bannerText)}</div>
-    </div>
-    ${htmlFooter(slideLabel)}
-  `;
+function shortRange(label) {
+  // "Sep 30 – Oct 6" -> "SEP 30 – OCT 6"
+  return String(label || "").toUpperCase();
 }
 
 function buildRevenueSlideHTML({ revenue }, slideLabel) {
@@ -1422,7 +1037,7 @@ function buildRevenueSlideHTML({ revenue }, slideLabel) {
     </div>
   `).join("");
 
-  const rows = rv.byTech.slice(0, 13);
+  const rows = rv.byTech;
   const BAR_SPACE = 74; // % of the bar column the longest bar may fill; the rest holds the $ label
   const bodyRows = rows.map((r, i) => {
     const w = Math.max(0, (r.week.cents / rv.maxWeekCents) * BAR_SPACE);
@@ -1450,15 +1065,16 @@ function buildRevenueSlideHTML({ revenue }, slideLabel) {
   if (top && top.week.cents > 0) {
     bannerClass = "has-leader";
     bannerText = `★ TOP TRUCK THIS WEEK:  ${top.name.toUpperCase()}  —  ${top.weekDisplay}`;
-    if (rv.otherWeekCents > 0) bannerText += `     ·     ${rv.otherWeekDisplay} FROM OTHER JOBS`;
   } else {
     bannerClass = "no-leader";
     bannerText = "REVENUE POSTS WHEN THE JOB IS FINISHED — HIT FINISH";
   }
 
-  const body = rows.length === 0
-    ? `<div class="data-empty">(no completed jobs yet this month)</div>`
-    : `
+  return `
+    ${htmlHeader("REVENUE BY TRUCK")}
+    <div class="slide-body">
+      <div class="subhead">COMPLETED JOBS  ·  CREDITED TO THE LEAD TECH ON THE JOB  ·  TRUCKS ONLY</div>
+      <div class="data-tiles">${tilesHTML}</div>
       <div class="dt dt-wide" style="--cols: 14% 40% 9% 13% 12.5% 11.5%;">
         <div class="dt-row head">
           <div class="dt-cell left">TRUCK</div>
@@ -1469,167 +1085,191 @@ function buildRevenueSlideHTML({ revenue }, slideLabel) {
           <div class="dt-cell">${escapeHtml(rv.monthLabel)}</div>
         </div>
         ${bodyRows}
-      </div>`;
-
-  return `
-    ${htmlHeader("REVENUE BY TRUCK")}
-    <div class="slide-body">
-      <div class="subhead">COMPLETED JOBS  ·  CREDITED TO THE LEAD TECH  ·  EACH TECH = ONE TRUCK</div>
-      <div class="data-tiles">${tilesHTML}</div>
-      ${body}
+      </div>
       <div class="tt-leader ${bannerClass}">${escapeHtml(bannerText)}</div>
     </div>
     ${htmlFooter(slideLabel)}
   `;
 }
 
-function buildEstimatesSlideHTML({ estimates }, slideLabel) {
-  const e = estimates;
-  const t = e.team;
+function buildButtonsSlideHTML({ hcpButtons }, slideLabel) {
+  const b = hcpButtons;
+  const rows = b.rows;
 
-  const tiles = [
-    { label: "ESTIMATES SENT", value: String(t.sent),           sub: `PRICED, LAST ${e.daysBack} DAYS`, cls: "navy" },
-    { label: "WON",            value: String(t.won),            sub: `${t.open} STILL OPEN`, cls: "green" },
-    { label: "WIN RATE",       value: fmtPctCell(t.winPct),     sub: "WON ÷ SENT", cls: "yellow" },
-    { label: "SOLD",           value: moneyFromCents(t.wonCents), sub: `${moneyFromCents(t.openCents)} STILL OUT THERE`, cls: "green" },
-  ];
-  const tilesHTML = tiles.map(x => `
-    <div class="data-tile ${x.cls}">
-      <div class="label">${escapeHtml(x.label)}</div>
-      <div class="value">${escapeHtml(x.value)}</div>
-      <div class="sub">${escapeHtml(x.sub)}</div>
-    </div>
-  `).join("");
-
-  const rows = e.byTech.slice(0, 13);
   const bodyRows = rows.map((r, i) => `
     <div class="dt-row body ${i % 2 ? "alt" : ""}">
-      <div class="dt-cell left strong">${escapeHtml(r.name)}</div>
-      <div class="dt-cell muted">${r.sent}</div>
-      <div class="dt-cell muted">${r.won}</div>
-      <div class="dt-cell strong">${fmtPctCell(r.winPct)}</div>
-      <div class="dt-cell">${escapeHtml(r.wonDisplay)}</div>
-      <div class="dt-cell muted">${escapeHtml(r.openDisplay)}</div>
+      <div class="dt-cell left strong">${escapeHtml(r.display)}</div>
+      <div class="dt-cell muted">${r.soloJobs}</div>
+      <div class="dt-cell pct ${btnPctClass(r.omw)}">${fmtPctCell(r.omw)}</div>
+      <div class="dt-cell pct ${btnPctClass(r.start)}">${fmtPctCell(r.start)}</div>
+      <div class="dt-cell pct ${btnPctClass(r.finish)}">${fmtPctCell(r.finish)}</div>
+      <div class="dt-cell pct strong ${btnPctClass(r.all3)}">${fmtPctCell(r.all3)}</div>
     </div>
   `).join("");
 
-  // Don't crown someone on one lucky estimate.
-  const eligible = e.byTech.filter(r => r.sent >= 3 && r.winPct != null);
-  const best = [...eligible].sort((a, b) => b.winPct - a.winPct || b.wonCents - a.wonCents)[0];
-  const bannerText = best
-    ? `★ BEST WIN RATE (3+ ESTIMATES):  ${best.name.toUpperCase()}  —  ${best.winPct}%`
-    : "PRICE IT, SEND IT, FOLLOW UP";
-  const bannerClass = best ? "has-leader" : "no-leader";
+  const t = b.team;
+  const noSolo = b.noSoloDisplay.length > 0
+    ? b.noSoloDisplay.map(n => n.toUpperCase()).join("  ·  ")
+    : "NONE";
+
+  const perfect = rows.filter(r => r.all3 === 100 && r.soloJobs >= 3).map(r => r.display.toUpperCase());
+  let bannerText, bannerClass;
+  if (b.stale) {
+    const days = Math.max(1, Math.round((b.ageHours || 0) / 24));
+    bannerClass = "stale";
+    bannerText = `⚠ OLD DATA — HCP BUTTONS SHEET LAST UPDATED ${String(b.updatedLabel).toUpperCase()} (${days} DAY${days === 1 ? "" : "S"} AGO)`;
+  } else if (perfect.length > 0) {
+    bannerClass = "has-leader";
+    bannerText = `★ ALL 3 BUTTONS ON EVERY SOLO JOB (3+ JOBS):  ${perfect.join("  ·  ")}`;
+  } else {
+    bannerClass = "no-leader";
+    bannerText = "HIT YOUR BUTTONS — IT'S HOW THIS DATA HAPPENS";
+  }
+
+  const subParts = [
+    "SOLO JOBS ONLY",
+    "% OF JOBS WITH THE BUTTON PRESSED",
+    String(b.last7Label || "LAST 7 DAYS").toUpperCase(),
+  ];
 
   return `
-    ${htmlHeader(`ESTIMATES — LAST ${e.daysBack} DAYS`)}
+    ${htmlHeader("HCP BUTTONS — SOLO JOBS")}
     <div class="slide-body">
-      <div class="subhead">PRICED ESTIMATES  ·  CREDITED TO THE LEAD TECH  ·  UNPRICED ONES AREN'T COUNTED</div>
-      <div class="data-tiles">${tilesHTML}</div>
-      <div class="dt dt-wide" style="--cols: 18% 12% 12% 16% 22% 20%;">
+      <div class="subhead">${escapeHtml(subParts.join("   ·   "))}</div>
+      <div class="dt hb-table" style="--cols: 22% 13% 16% 16% 16% 17%;">
         <div class="dt-row head">
           <div class="dt-cell left">TECH</div>
-          <div class="dt-cell">SENT</div>
-          <div class="dt-cell">WON</div>
-          <div class="dt-cell">WIN RATE</div>
-          <div class="dt-cell">SOLD</div>
-          <div class="dt-cell">STILL OPEN</div>
+          <div class="dt-cell">SOLO JOBS</div>
+          <div class="dt-cell">ON MY WAY</div>
+          <div class="dt-cell">START</div>
+          <div class="dt-cell">FINISH</div>
+          <div class="dt-cell">ALL 3</div>
         </div>
         ${bodyRows}
       </div>
+      <div class="hb-side">
+        <div class="hb-tile ${btnPctClass(t.all3)}">
+          <div class="label">TEAM  —  ALL 3 BUTTONS</div>
+          <div class="value">${fmtPctCell(t.all3)}</div>
+          <div class="sub">${t.soloJobs} SOLO JOBS  ·  LAST 7 DAYS</div>
+        </div>
+        <div class="hb-tile navy">
+          <div class="label">SHEET UPDATED</div>
+          <div class="value" style="font-size: 1.7vw;">${escapeHtml(String(b.updatedLabel || "—").toUpperCase())}</div>
+          <div class="sub">${b.stale ? "OLDER THAN IT SHOULD BE" : "FRESH"}</div>
+        </div>
+        <div class="hb-note">
+          <div class="label">NO SOLO JOBS THIS WEEK</div>
+          <div class="text">${escapeHtml(noSolo)}</div>
+        </div>
+      </div>
       <div class="tt-leader ${bannerClass}">${escapeHtml(bannerText)}</div>
-    </div>
-    ${htmlFooter(slideLabel)}
-  `;
-}
-
-function buildSafetySlideHTML({ safetyTopic }, slideLabel) {
-  const bullets = (safetyTopic.bullets || []);
-  const bulletHTML = bullets.length > 0
-    ? bullets.map(b => `<li>${escapeHtml(b)}</li>`).join("")
-    : "<li>(no bullets provided)</li>";
-  return `
-    ${htmlHeader("SAFETY & SHOP REMINDERS")}
-    <div class="slide-body">
-      <div class="safety-left">
-        <div class="safety-tag">⚠ SAFETY TOPIC OF THE WEEK</div>
-        <div class="safety-headline">${escapeHtml((safetyTopic.headline || "").toUpperCase())}</div>
-        <ul class="safety-bullets">${bulletHTML}</ul>
-        <div class="safety-banner">QUESTIONS?  ASK YOUR LEAD BEFORE YOU START THE JOB</div>
-      </div>
-      <div class="safety-right">
-        <div class="safety-tile"><div class="accent"></div><div class="body"><div class="label">VAN CHECK</div><div class="text">Walk-around + fluids — every Monday AM</div></div></div>
-        <div class="safety-tile"><div class="accent"></div><div class="body"><div class="label">PPE</div><div class="text">Boots, eyes, gloves, hard hat on every job</div></div></div>
-        <div class="safety-tile"><div class="accent"></div><div class="body"><div class="label">HCP UPDATES</div><div class="text">Close job + notes before leaving the site</div></div></div>
-        <div class="safety-tile"><div class="accent"></div><div class="body"><div class="label">TOOL ACCOUNTABILITY</div><div class="text">Scan in/out of the crib — no exceptions</div></div></div>
-      </div>
-    </div>
-    ${htmlFooter(slideLabel)}
-  `;
-}
-
-function buildShoutoutSlideHTML({ shoutout }, slideLabel) {
-  const stars = "★ ★ ★ ★ ★";
-  return `
-    ${htmlHeader("SHOUTOUTS")}
-    <div class="slide-body">
-      <div class="shoutout-card">
-        <div class="shoutout-tag">TECH OF THE WEEK</div>
-        <div class="shoutout-stars">${stars}</div>
-        <div class="shoutout-name">${escapeHtml(shoutout.techName.toUpperCase())}</div>
-        <div class="shoutout-divider"></div>
-        <div class="shoutout-why">WHY THEY'RE GETTING RECOGNIZED</div>
-        <div class="shoutout-reason">${escapeHtml(shoutout.reason || "")}</div>
-      </div>
     </div>
     ${htmlFooter(slideLabel)}
   `;
 }
 
 function buildServiceAreasSlideHTML({ serviceAreas }, slideLabel) {
-  const days = serviceAreas?.daysBack || 30;
-  const total = serviceAreas?.totalJobs || 0;
-  const cities = serviceAreas?.cities || [];
+  const sa = serviceAreas;
+  const L = sa.labels;
 
-  if (cities.length === 0) {
+  const rowHTML = (r, i, extraClass = "") => {
+    const d7 = deltaCell(r.d7);
+    const d30 = deltaCell(r.d30);
     return `
-      ${htmlHeader("SERVICE AREAS — WHERE THE WORK IS")}
-      <div class="slide-body">
-        <div class="subhead">COMPLETED JOBS BY CITY — LAST ${days} DAYS</div>
-        <div style="text-align:center; margin-top: 25%; color: ${COLORS.GRAY_MUTED}; font-size: 1.4vw; font-style: italic;">
-          (no completed job data available)
-        </div>
-      </div>
-      ${htmlFooter(slideLabel)}
-    `;
-  }
-
-  const maxCount = cities[0]?.count || 1;
-  const visible = cities.slice(0, 7);
-
-  const rowHTML = visible.map((c, i) => {
-    const isLeader = i === 0;
-    const pct = (c.count / maxCount) * 100;
-    return `
-      <div class="area-row${isLeader ? " leader" : ""}">
-        <div class="rank">#${i + 1}</div>
-        <div class="city">${escapeHtml(c.city.toUpperCase())}</div>
-        <div class="bar-track">
-          <div class="bar-bg">
-            <div class="bar-fill" style="width: ${pct}%;"></div>
-          </div>
-        </div>
-        <div class="count">${c.count}</div>
+      <div class="dt-row body ${extraClass} ${i % 2 ? "alt" : ""}">
+        <div class="dt-cell left strong">${escapeHtml(r.city)}</div>
+        <div class="dt-cell strong">${r.w7}</div>
+        <div class="dt-cell dim">${r.p7}</div>
+        <div class="dt-cell strong ${d7.cls}">${d7.text}</div>
+        <div class="dt-cell strong">${r.w30}</div>
+        <div class="dt-cell dim">${r.p30}</div>
+        <div class="dt-cell strong ${d30.cls}">${d30.text}</div>
       </div>
     `;
-  }).join("");
+  };
+
+  const bodyRows = sa.rows.map((r, i) => rowHTML(r, i)).join("");
+  const totalRow = rowHTML({ city: "ALL CITIES", ...sa.totals }, 0, "total");
+
+  // Biggest mover in each direction over 30 days.
+  const byGain = [...sa.rows].sort((a, b) => b.d30 - a.d30);
+  const gain = byGain[0];
+  const drop = byGain[byGain.length - 1];
+  const parts = [];
+  if (gain && gain.d30 > 0) parts.push(`▲ BIGGEST GAIN (30 DAYS):  ${gain.city.toUpperCase()}  +${gain.d30}`);
+  if (drop && drop.d30 < 0) parts.push(`▼ BIGGEST DROP:  ${drop.city.toUpperCase()}  −${Math.abs(drop.d30)}`);
+  const bannerText = parts.length > 0 ? parts.join("     ·     ") : "WHERE THE WORK IS — COMPLETED JOBS BY CITY";
+  const bannerClass = parts.length > 0 ? "has-leader" : "no-leader";
 
   return `
     ${htmlHeader("SERVICE AREAS — WHERE THE WORK IS")}
     <div class="slide-body">
-      <div class="subhead">COMPLETED JOBS BY CITY — LAST ${days} DAYS  ·  ${total} TOTAL JOBS</div>
-      <div class="areas-list">${rowHTML}</div>
-      <div class="footer-banner">KNOW YOUR TERRITORY  —  EVERY ZIP CODE IS AN OPPORTUNITY</div>
+      <div class="subhead">COMPLETED JOBS PER CITY  ·  EACH PERIOD VS THE PERIOD BEFORE IT  ·  THROUGH YESTERDAY</div>
+      <div class="dt" style="--cols: 19% 13.5% 13.5% 13.5% 13.5% 13.5% 13.5%; top: 6%; left: 3.75%; right: 3.75%; bottom: 9%;">
+        <div class="dt-row group">
+          <div class="dt-cell"></div>
+          <div class="dt-cell" style="grid-column: span 3;">7-DAY COMPARISON</div>
+          <div class="dt-cell g30" style="grid-column: span 3;">30-DAY COMPARISON</div>
+        </div>
+        <div class="dt-row head">
+          <div class="dt-cell left">CITY</div>
+          <div class="dt-cell">${escapeHtml(shortRange(L.w7))}</div>
+          <div class="dt-cell">${escapeHtml(shortRange(L.p7))}</div>
+          <div class="dt-cell">CHANGE</div>
+          <div class="dt-cell">${escapeHtml(shortRange(L.w30))}</div>
+          <div class="dt-cell">${escapeHtml(shortRange(L.p30))}</div>
+          <div class="dt-cell">CHANGE</div>
+        </div>
+        ${bodyRows}
+        ${totalRow}
+      </div>
+      <div class="tt-leader ${bannerClass}">${escapeHtml(bannerText)}</div>
+    </div>
+    ${htmlFooter(slideLabel)}
+  `;
+}
+
+function buildTechYearSlideHTML({ techYear }, slideLabel) {
+  const ty = techYear;
+  const rows = ty.techs;
+
+  // Highlight the leader in each column so strengths jump out.
+  const maxOf = key => Math.max(...rows.map(r => r[key] ?? -Infinity));
+  const lead = { jobs: maxOf("jobs"), avg: maxOf("avgJobCents"), onJob: maxOf("onJobHours"), travel: maxOf("travelHours") };
+  const fmtInt = n => Math.round(n).toLocaleString("en-US");
+
+  const bodyRows = rows.map((r, i) => `
+    <div class="dt-row body ${i % 2 ? "alt" : ""}">
+      <div class="dt-cell left strong">${escapeHtml(r.name)}</div>
+      <div class="dt-cell strong ${r.jobs === lead.jobs ? "lead" : ""}">${fmtInt(r.jobs)}</div>
+      <div class="dt-cell strong ${r.avgJobCents === lead.avg ? "lead" : ""}">${escapeHtml(r.avgJobDisplay)}</div>
+      <div class="dt-cell">${r.hoursPerJob != null ? r.hoursPerJob.toFixed(1) : "—"}</div>
+      <div class="dt-cell strong ${r.onJobHours === lead.onJob ? "lead" : ""}">${fmtInt(r.onJobHours)}</div>
+      <div class="dt-cell strong ${r.travelHours === lead.travel ? "lead" : ""}">${fmtInt(r.travelHours)}</div>
+    </div>
+  `).join("");
+
+  const year = String(ty.asOfDay).slice(0, 4);
+  const asOf = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" })
+    .format(new Date(`${ty.asOfDay}T12:00:00Z`)).toUpperCase();
+
+  return `
+    ${htmlHeader(`TECH STATS — ${year} YEAR TO DATE`)}
+    <div class="slide-body">
+      <div class="subhead">COMPLETED JOBS  ·  A JOB COUNTS FOR EVERY TECH ON IT  ·  UPDATED WEEKLY  ·  AS OF ${escapeHtml(asOf)}</div>
+      <div class="dt dt-wide" style="--cols: 18% 14% 20% 16% 16% 16%; top: 6%;">
+        <div class="dt-row head">
+          <div class="dt-cell left">TECH</div>
+          <div class="dt-cell">JOB COUNT</div>
+          <div class="dt-cell">AVG JOB SIZE</div>
+          <div class="dt-cell">HRS / JOB</div>
+          <div class="dt-cell">ON-JOB HRS</div>
+          <div class="dt-cell">TRAVEL HRS</div>
+        </div>
+        ${bodyRows}
+      </div>
+      <div class="footer-banner" style="font-size: 0.8vw;">HOURS COME FROM THE ON MY WAY / START / FINISH BUTTONS  ·  MULTI-DAY JOBS AND MISSED BUTTONS ARE LEFT OUT OF HOURS</div>
     </div>
     ${htmlFooter(slideLabel)}
   `;
@@ -1697,12 +1337,29 @@ function buildSlideshowJS(slidePlan, slideTimings) {
 
       clearTimeout(currentTimer);
       currentTimer = setTimeout(() => {
-        currentIndex = (currentIndex + 1) % slides.length;
+        const next = (currentIndex + 1) % slides.length;
+        // End of a full rotation and the data is old enough: fetch a fresh page.
+        if (next === 0 && Date.now() - LOADED_AT > REFRESH_MS) { hardReload(); return; }
+        currentIndex = next;
         showSlide(currentIndex);
       }, seconds * 1000);
     }
 
-    setTimeout(() => location.reload(), 12 * 60 * 60 * 1000);
+    // The board rebuilds every ~10 minutes, so reload at the end of a rotation
+    // once the page is older than that. TV browsers (Amazon Silk etc.) cache
+    // HTML aggressively, so navigate to a unique URL rather than location.reload().
+    const LOADED_AT = Date.now();
+    const REFRESH_MS = 8 * 60 * 1000;
+    function hardReload() {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('_t', Date.now());
+        window.location.replace(url.toString());
+      } catch (e) {
+        const sep = window.location.href.indexOf('?') === -1 ? '?' : '&';
+        window.location.replace(window.location.href.split('?')[0] + sep + '_t=' + Date.now());
+      }
+    }
 
     document.addEventListener('click', () => {
       currentIndex = (currentIndex + 1) % slides.length;
@@ -1799,82 +1456,47 @@ function buildSlideshowJS(slidePlan, slideTimings) {
 }
 
 export async function renderHTML(data, outputPath) {
+  // Slide order. A slide whose data failed to load is simply left out, so one
+  // broken source never blanks the TV.
   const plan = [];
-  plan.push({ key: "cover",        label: "COVER" });
-  plan.push({ key: "oncall",       label: "ON CALL" });
-  plan.push({ key: "events",       label: "EVENTS" });
-  plan.push({ key: "newitems",     label: "NEW ITEMS" });
-  plan.push({ key: "reviews",      label: "REVIEWS" });
-  plan.push({ key: "jobboard",     label: "JOB BOARD" });
-  if (data.revenue)   plan.push({ key: "revenue",   label: "REVENUE" });
-  if (data.estimates) plan.push({ key: "estimates", label: "ESTIMATES" });
-  plan.push({ key: "tagdurations", label: "AVG TIMES" });
-  plan.push({ key: "hygiene",      label: data.hcpButtons ? "HCP BUTTONS" : "TIME TRACKING" });
-  if (data.safetyTopic) plan.push({ key: "safety",   label: "SAFETY" });
-  if (data.shoutout)    plan.push({ key: "shoutout", label: "SHOUTOUT" });
-  plan.push({ key: "serviceareas", label: "SERVICE AREAS" });
-  plan.push({ key: "kpis",         label: "GOALS" });
+  plan.push({ key: "oncall", label: "ON CALL" });
+  if (data.kpis)         plan.push({ key: "kpis",         label: "GOALS" });
+  if (data.revenue)      plan.push({ key: "revenue",      label: "REVENUE BY TRUCK" });
+  if (data.hcpButtons)   plan.push({ key: "buttons",      label: "HCP BUTTONS" });
+  if (data.serviceAreas) plan.push({ key: "areas",        label: "SERVICE AREAS" });
+  if (data.tagDurations && data.tagDurations.length > 0) {
+    plan.push({ key: "tagdurations", label: "AVG TIMES" });
+  }
+  if (data.techYear)     plan.push({ key: "techyear",     label: "TECH STATS" });
 
-  const totalNumbered = plan.length - 1;
-  let numberedIndex = 0;
-  const labelFor = (i) => {
-    if (plan[i].key === "cover") return "";
-    numberedIndex += 1;
-    return `${plan[i].label}  /  ${String(numberedIndex).padStart(2, "0")}  OF  ${String(totalNumbered).padStart(2, "0")}`;
-  };
+  const total = plan.length;
+  const labelFor = (i) =>
+    `${plan[i].label}  /  ${String(i + 1).padStart(2, "0")}  OF  ${String(total).padStart(2, "0")}`;
 
   const slidesHTML = plan.map((item, i) => {
     const labelStr = labelFor(i);
     let inner = "";
     switch (item.key) {
-      case "cover":
-        inner = buildCoverSlideHTML({
-          weekHumanLabel: data.weekOf.humanLabel,
-          onCall: data.onCall,
-        });
-        break;
       case "oncall":
         inner = buildOnCallSlideHTML({ onCall: data.onCall }, labelStr);
         break;
-      case "events":
-        inner = buildEventsSlideHTML({ events: data.events }, labelStr);
-        break;
-      case "newitems":
-        inner = buildNewItemsSlideHTML({ newItems: data.newItems }, labelStr);
-        break;
-      case "reviews":
-        inner = buildReviewsSlideHTML({ googleReviews: data.googleReviews }, labelStr);
-        break;
-      case "jobboard":
-        inner = buildJobBoardSlideHTML({ jobBoard: data.jobBoard }, labelStr);
+      case "kpis":
+        inner = buildKPIsSlideHTML({ kpis: data.kpis }, labelStr);
         break;
       case "revenue":
         inner = buildRevenueSlideHTML({ revenue: data.revenue }, labelStr);
         break;
-      case "estimates":
-        inner = buildEstimatesSlideHTML({ estimates: data.estimates }, labelStr);
+      case "buttons":
+        inner = buildButtonsSlideHTML({ hcpButtons: data.hcpButtons }, labelStr);
+        break;
+      case "areas":
+        inner = buildServiceAreasSlideHTML({ serviceAreas: data.serviceAreas }, labelStr);
         break;
       case "tagdurations":
         inner = buildTagDurationsSlideHTML({ tagDurations: data.tagDurations }, labelStr);
         break;
-      case "hygiene":
-        // Prefer the HCP Buttons sheet; fall back to the API-computed slide if
-        // the sheet couldn't be read this run.
-        inner = data.hcpButtons
-          ? buildHcpButtonsSlideHTML({ hcpButtons: data.hcpButtons }, labelStr)
-          : buildTimeTrackingSlideHTML({ hygiene: data.hygiene }, labelStr);
-        break;
-      case "safety":
-        inner = buildSafetySlideHTML({ safetyTopic: data.safetyTopic }, labelStr);
-        break;
-      case "shoutout":
-        inner = buildShoutoutSlideHTML({ shoutout: data.shoutout }, labelStr);
-        break;
-      case "serviceareas":
-        inner = buildServiceAreasSlideHTML({ serviceAreas: data.serviceAreas }, labelStr);
-        break;
-      case "kpis":
-        inner = buildKPIsSlideHTML({ kpis: data.kpis }, labelStr);
+      case "techyear":
+        inner = buildTechYearSlideHTML({ techYear: data.techYear }, labelStr);
         break;
     }
     return `<div class="slide" data-key="${item.key}">${inner}</div>`;
@@ -1886,7 +1508,7 @@ export async function renderHTML(data, outputPath) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Golden Rule — Shop Briefing — ${escapeHtml(data.weekOf.humanLabel)}</title>
+  <title>Golden Rule — Shop Board — ${escapeHtml(data.weekOf.humanLabel)}</title>
   <style>${buildCSS()}</style>
 </head>
 <body>

@@ -22,20 +22,32 @@ async function hcpFetch(path, params = {}) {
     if (v !== undefined && v !== null) url.searchParams.set(k, v);
   }
 
-  const res = await fetch(url, {
-    headers: {
-      "Authorization": `Token ${apiKey}`,
-      "Accept": "application/json",
-    },
-  });
+  // Retry rate-limit (429) responses a few times. The yearly-stats refresh makes
+  // dozens of back-to-back calls and should wait its turn, not die half-way.
+  const MAX_ATTEMPTS = 4;
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(url, {
+      headers: {
+        "Authorization": `Token ${apiKey}`,
+        "Accept": "application/json",
+      },
+    });
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(
-      `HCP API ${res.status} ${res.statusText} on ${path}\n${body}`
-    );
+    if (res.status === 429 && attempt < MAX_ATTEMPTS) {
+      const waitSec = Number(res.headers.get("retry-after")) || 2 * attempt;
+      console.warn(`[hcp] 429 on ${path} - waiting ${waitSec}s (attempt ${attempt}/${MAX_ATTEMPTS})`);
+      await new Promise(r => setTimeout(r, waitSec * 1000));
+      continue;
+    }
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(
+        `HCP API ${res.status} ${res.statusText} on ${path}\n${body}`
+      );
+    }
+    return res.json();
   }
-  return res.json();
 }
 
 // Returns jobs scheduled between two ISO dates.
