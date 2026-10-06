@@ -23,6 +23,13 @@ assert.equal(k.lastWeekStart, "2026-09-28");
 assert.equal(k.lastWeekEnd, "2026-10-04");
 assert.equal(k.lastWeekSamePointEnd, "2026-09-30");
 assert.equal(k.monthStart, "2026-10-01");
+assert.equal(k.lastMonthStart, "2026-09-01");
+assert.equal(k.lastMonthEnd, "2026-09-30");
+assert.equal(k.lastMonthSamePointEnd, "2026-09-07");
+// Same-point cutoff never runs past the end of a shorter previous month (Mar 31 vs Feb)
+const kMar = periodKeys(new Date("2026-03-31T16:00:00Z"));
+assert.equal(kMar.lastMonthStart, "2026-02-01");
+assert.equal(kMar.lastMonthSamePointEnd, "2026-02-28");
 
 // Only the ten truck techs are listed, in this exact set.
 assert.deepEqual([...TRUCK_TECH_NAMES].sort(),
@@ -46,6 +53,8 @@ const jobs = [
   job("complete", 50, "2026-10-01T03:30:00Z", jay),              // 11:30pm ET Wed Sep 30 -> last week, inside cutoff
   job("complete", 100, "2026-10-01T04:30:00Z", jay),             // 12:30am ET Thu Oct 1 -> last week, in October
   job("complete", 600, "2026-10-02T15:00:00Z", matt),            // last week (Fri), in October
+  job("complete", 200, "2026-09-03T15:00:00Z", jay),             // September, inside same-point window (Sep 1-7)
+  job("complete", 900, "2026-09-20T15:00:00Z", matt),            // September, after same-point cutoff
 ];
 const r = rollupRevenue(jobs, { now });
 
@@ -57,16 +66,23 @@ assert.equal(r.periods.lastWeekSamePoint.cents, (400 + 50) * 100);
 assert.equal(r.periods.month.cents, (1000 + 500 + 300 + 100 + 600) * 100);
 assert.equal(r.weekDeltaPct, Math.round(((1800 - 450) / 450) * 100));
 
+assert.equal(r.periods.lastMonth.cents, (400 + 50 + 200 + 900) * 100);
+assert.equal(r.periods.lastMonthSamePoint.cents, 200 * 100);
+assert.equal(r.monthDeltaPct, Math.round(((2500 - 200) / 200) * 100));
+assert.equal(r.lastMonthLabel, "SEPTEMBER");
+
 assert.equal(r.byTech.length, 10);                                       // every truck has a row
 assert.ok(!r.byTech.some(x => x.name === "Jacob"));
-assert.equal(r.byTech[0].name, "Jay");
+assert.equal(r.byTech[0].name, "Jay");                                   // sorted by this month
 const jayRow = r.byTech.find(x => x.name === "Jay");
-assert.equal(jayRow.week.cents, (1000 + 500) * 100);
-assert.equal(jayRow.week.jobs, 2);
-assert.equal(r.byTech.find(x => x.name === "Matt").week.cents, 300 * 100); // crew job did NOT credit Matt
-assert.equal(r.byTech.find(x => x.name === "Sam").week.cents, 0);          // quiet truck still listed
-// The table adds up to the week tile.
-assert.equal(r.byTech.reduce((s, x) => s + x.week.cents, 0), r.periods.week.cents);
+assert.equal(jayRow.month.cents, (1000 + 500 + 100) * 100);              // crew job credits lead only
+assert.equal(jayRow.month.jobs, 3);
+assert.equal(jayRow.lastMonth.cents, (400 + 50 + 200) * 100);
+assert.equal(r.byTech.find(x => x.name === "Matt").month.cents, (300 + 600) * 100);
+assert.equal(r.byTech.find(x => x.name === "Matt").lastMonth.cents, 900 * 100);
+assert.equal(r.byTech.find(x => x.name === "Sam").month.cents, 0);       // quiet truck still listed
+assert.equal(r.byTech.reduce((s, x) => s + x.month.cents, 0), r.periods.month.cents);
+assert.equal(r.byTech.reduce((s, x) => s + x.lastMonth.cents, 0), r.periods.lastMonth.cents);
 
 // =============================================================================
 // Service-area trends
