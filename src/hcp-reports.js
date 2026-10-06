@@ -29,13 +29,21 @@ export function periodKeys(now = new Date()) {
   const weekStart = mondayKey(today);
   const lastWeekStart = addDaysKey(weekStart, -7);
   const daysIntoWeek = Math.round((keyToUTCNoon(today) - keyToUTCNoon(weekStart)) / 86400000);
+  const monthStart = `${today.slice(0, 7)}-01`;
+  const lastMonthEnd = addDaysKey(monthStart, -1);
+  const lastMonthStart = `${lastMonthEnd.slice(0, 7)}-01`;
+  const dayOfMonth = Number(today.slice(8, 10));
+  const samePoint = addDaysKey(lastMonthStart, dayOfMonth - 1);
   return {
     today,
     weekStart,
     lastWeekStart,
     lastWeekEnd: addDaysKey(weekStart, -1),
     lastWeekSamePointEnd: addDaysKey(lastWeekStart, daysIntoWeek),
-    monthStart: `${today.slice(0, 7)}-01`,
+    monthStart,
+    lastMonthStart,
+    lastMonthEnd,
+    lastMonthSamePointEnd: samePoint < lastMonthEnd ? samePoint : lastMonthEnd,
   };
 }
 
@@ -51,9 +59,10 @@ export function rollupRevenue(jobs, { now = new Date() } = {}) {
   const periods = {
     today: blank(), week: blank(), lastWeek: blank(),
     lastWeekSamePoint: blank(), month: blank(),
+    lastMonth: blank(), lastMonthSamePoint: blank(),
   };
   const techRows = new Map(TRUCK_TECHS.map(t => [t.id, {
-    id: t.id, name: t.display, week: blank(), lastWeek: blank(), month: blank(),
+    id: t.id, name: t.display, month: blank(), lastMonth: blank(),
   }]));
   let otherWeekCents = 0;
 
@@ -78,26 +87,36 @@ export function rollupRevenue(jobs, { now = new Date() } = {}) {
     const inMonth = inRange(day, k.monthStart, k.today);
 
     if (day === k.today) add(periods.today, cents);
-    if (inWeek) { add(periods.week, cents); add(row.week, cents); }
-    if (inLastWeek) { add(periods.lastWeek, cents); add(row.lastWeek, cents); }
+    if (inWeek) add(periods.week, cents);
+    if (inLastWeek) add(periods.lastWeek, cents);
     if (inRange(day, k.lastWeekStart, k.lastWeekSamePointEnd)) add(periods.lastWeekSamePoint, cents);
     if (inMonth) { add(periods.month, cents); add(row.month, cents); }
+    if (inRange(day, k.lastMonthStart, k.lastMonthEnd)) { add(periods.lastMonth, cents); add(row.lastMonth, cents); }
+    if (inRange(day, k.lastMonthStart, k.lastMonthSamePointEnd)) add(periods.lastMonthSamePoint, cents);
   }
 
   // Every truck gets a row, even at $0, so a quiet truck is visible rather than missing.
   const byTech = [...techRows.values()]
     .map(r => ({
       ...r,
-      weekDisplay: fmtMoney(r.week.cents),
       monthDisplay: fmtMoney(r.month.cents),
-      avgTicketDisplay: r.week.jobs > 0 ? fmtMoney(r.week.cents / r.week.jobs) : "—",
+      lastMonthDisplay: fmtMoney(r.lastMonth.cents),
+      avgTicketDisplay: r.month.jobs > 0 ? fmtMoney(r.month.cents / r.month.jobs) : "—",
+      lastMonthAvgTicketDisplay: r.lastMonth.jobs > 0 ? fmtMoney(r.lastMonth.cents / r.lastMonth.jobs) : "—",
     }))
-    .sort((a, b) => b.week.cents - a.week.cents || b.month.cents - a.month.cents);
+    .sort((a, b) => b.month.cents - a.month.cents || b.lastMonth.cents - a.lastMonth.cents);
 
   let weekDeltaPct = null;
   if (periods.week.cents > 0 && periods.lastWeekSamePoint.cents > 0) {
     weekDeltaPct = Math.round(
       ((periods.week.cents - periods.lastWeekSamePoint.cents) / periods.lastWeekSamePoint.cents) * 100
+    );
+  }
+
+  let monthDeltaPct = null;
+  if (periods.month.cents > 0 && periods.lastMonthSamePoint.cents > 0) {
+    monthDeltaPct = Math.round(
+      ((periods.month.cents - periods.lastMonthSamePoint.cents) / periods.lastMonthSamePoint.cents) * 100
     );
   }
 
@@ -112,16 +131,19 @@ export function rollupRevenue(jobs, { now = new Date() } = {}) {
     periods,
     display,
     weekDeltaPct,
+    monthDeltaPct,
+    lastMonthLabel: new Intl.DateTimeFormat("en-US", { timeZone: ET, month: "long" })
+      .format(keyToUTCNoon(k.lastMonthStart)).toUpperCase(),
     otherWeekCents,
     otherWeekDisplay: fmtMoney(otherWeekCents),
     byTech,
-    maxWeekCents: Math.max(1, ...byTech.map(r => r.week.cents)),
+    maxMonthCents: Math.max(1, ...byTech.map(r => r.month.cents)),
   };
 }
 
 export async function getRevenueByTruck({ now = new Date() } = {}) {
   const k = periodKeys(now);
-  const earliest = [k.lastWeekStart, k.monthStart].sort()[0];
+  const earliest = [k.lastWeekStart, k.lastMonthStart].sort()[0];
   // Pad both ends: HCP filters on scheduled start, we bucket on completion day.
   const startISO = new Date(keyToUTCNoon(earliest).getTime() - 2 * 86400000).toISOString();
   const endISO = new Date(now.getTime() + 36 * 3600000).toISOString();

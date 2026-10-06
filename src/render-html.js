@@ -1018,16 +1018,16 @@ function shortRange(label) {
 function buildRevenueSlideHTML({ revenue }, slideLabel) {
   const rv = revenue;
   const p = rv.periods;
-  const delta = rv.weekDeltaPct;
-  const weekSub = delta == null
-    ? "WEEK TO DATE"
-    : `${delta >= 0 ? "UP" : "DOWN"} ${Math.abs(delta)}% VS SAME POINT LAST WEEK`;
+  const delta = rv.monthDeltaPct;
+  const monthSub = delta == null
+    ? `${p.month.jobs} JOBS CLOSED`
+    : `${delta >= 0 ? "UP" : "DOWN"} ${Math.abs(delta)}% VS SAME POINT LAST MONTH`;
 
   const tiles = [
-    { label: "TODAY",      value: rv.display.today,     sub: `${p.today.jobs} JOBS CLOSED`, cls: "yellow" },
-    { label: "THIS WEEK",  value: rv.display.week,      sub: weekSub, cls: delta != null && delta < 0 ? "red" : "green" },
-    { label: "LAST WEEK",  value: rv.display.lastWeek,  sub: `${p.lastWeek.jobs} JOBS CLOSED`, cls: "navy" },
-    { label: `${rv.monthLabel} TO DATE`, value: rv.display.month, sub: `${p.month.jobs} JOBS CLOSED`, cls: "navy" },
+    { label: "TODAY",      value: rv.display.today,  sub: `${p.today.jobs} JOBS CLOSED`, cls: "yellow" },
+    { label: "THIS WEEK",  value: rv.display.week,   sub: `${p.week.jobs} JOBS CLOSED`, cls: "navy" },
+    { label: `${rv.monthLabel} TO DATE`, value: rv.display.month, sub: monthSub, cls: delta != null && delta < 0 ? "red" : "green" },
+    { label: `${rv.lastMonthLabel} (FULL MONTH)`, value: rv.display.lastMonth, sub: `${p.lastMonth.jobs} JOBS CLOSED`, cls: "navy" },
   ];
   const tilesHTML = tiles.map(t => `
     <div class="data-tile ${t.cls}">
@@ -1038,23 +1038,24 @@ function buildRevenueSlideHTML({ revenue }, slideLabel) {
   `).join("");
 
   const rows = rv.byTech;
-  const BAR_SPACE = 74; // % of the bar column the longest bar may fill; the rest holds the $ label
+  const BAR_SPACE = 70; // % of the bar column the longest bar may fill; the rest holds the $ label
   const bodyRows = rows.map((r, i) => {
-    const w = Math.max(0, (r.week.cents / rv.maxWeekCents) * BAR_SPACE);
-    const isTop = i === 0 && r.week.cents > 0;
+    const w = Math.max(0, (r.month.cents / rv.maxMonthCents) * BAR_SPACE);
+    const isTop = i === 0 && r.month.cents > 0;
     return `
       <div class="dt-row body ${i % 2 ? "alt" : ""}">
         <div class="dt-cell left strong">${escapeHtml(r.name)}</div>
         <div class="dt-cell bar">
           <div class="bar-wrap">
             <div class="bar-fill ${isTop ? "top" : ""}" style="width:${w.toFixed(1)}%"></div>
-            <div class="bar-label">${escapeHtml(r.weekDisplay)}</div>
+            <div class="bar-label">${escapeHtml(r.monthDisplay)}</div>
           </div>
         </div>
-        <div class="dt-cell muted">${r.week.jobs}</div>
-        <div class="dt-cell muted">${escapeHtml(r.avgTicketDisplay)}</div>
-        <div class="dt-cell muted">${escapeHtml(moneyFromCents(r.lastWeek.cents))}</div>
-        <div class="dt-cell muted">${escapeHtml(r.monthDisplay)}</div>
+        <div class="dt-cell">${r.month.jobs}</div>
+        <div class="dt-cell">${escapeHtml(r.avgTicketDisplay)}</div>
+        <div class="dt-cell muted strong">${escapeHtml(r.lastMonthDisplay)}</div>
+        <div class="dt-cell muted">${r.lastMonth.jobs}</div>
+        <div class="dt-cell muted">${escapeHtml(r.lastMonthAvgTicketDisplay)}</div>
       </div>
     `;
   }).join("");
@@ -1062,9 +1063,9 @@ function buildRevenueSlideHTML({ revenue }, slideLabel) {
   const top = rows[0];
   let bannerText;
   let bannerClass;
-  if (top && top.week.cents > 0) {
+  if (top && top.month.cents > 0) {
     bannerClass = "has-leader";
-    bannerText = `★ TOP TRUCK THIS WEEK:  ${top.name.toUpperCase()}  —  ${top.weekDisplay}`;
+    bannerText = `★ TOP TRUCK IN ${rv.monthLabel}:  ${top.name.toUpperCase()}  —  ${top.monthDisplay}`;
   } else {
     bannerClass = "no-leader";
     bannerText = "REVENUE POSTS WHEN THE JOB IS FINISHED — HIT FINISH";
@@ -1075,14 +1076,15 @@ function buildRevenueSlideHTML({ revenue }, slideLabel) {
     <div class="slide-body">
       <div class="subhead">COMPLETED JOBS  ·  CREDITED TO THE LEAD TECH ON THE JOB  ·  TRUCKS ONLY</div>
       <div class="data-tiles">${tilesHTML}</div>
-      <div class="dt dt-wide" style="--cols: 14% 40% 9% 13% 12.5% 11.5%;">
+      <div class="dt dt-wide" style="--cols: 11% 33% 7% 12% 15% 8% 14%;">
         <div class="dt-row head">
           <div class="dt-cell left">TRUCK</div>
-          <div class="dt-cell">THIS WEEK</div>
+          <div class="dt-cell">${escapeHtml(rv.monthLabel)} TO DATE</div>
           <div class="dt-cell">JOBS</div>
           <div class="dt-cell">AVG TICKET</div>
-          <div class="dt-cell">LAST WEEK</div>
-          <div class="dt-cell">${escapeHtml(rv.monthLabel)}</div>
+          <div class="dt-cell">${escapeHtml(rv.lastMonthLabel)}</div>
+          <div class="dt-cell">JOBS</div>
+          <div class="dt-cell">AVG TICKET</div>
         </div>
         ${bodyRows}
       </div>
