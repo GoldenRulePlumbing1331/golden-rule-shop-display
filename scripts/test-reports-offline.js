@@ -44,7 +44,7 @@ const job = (status, dollars, completedISO, ...leads) => ({
 
 const jobs = [
   job("complete", 1000, "2026-10-07T15:00:00Z", jay),            // today
-  job("complete rated", 500, "2026-10-06T15:00:00Z", jay, matt), // this week, crew: lead (Jay) only
+  job("complete rated", 500, "2026-10-06T15:00:00Z", jay, matt), // this week, crew: Jay AND Matt both credited
   job("complete", 300, "2026-10-05T15:00:00Z", matt),            // this week (Monday)
   job("complete", 200, "2026-10-05T15:00:00Z", jacob),           // led by a non-truck tech -> "other"
   job("scheduled", 9999, null, jay),                              // not complete: ignored
@@ -75,13 +75,15 @@ assert.equal(r.byTech.length, 10);                                       // ever
 assert.ok(!r.byTech.some(x => x.name === "Jacob"));
 assert.equal(r.byTech[0].name, "Jay");                                   // sorted by this month
 const jayRow = r.byTech.find(x => x.name === "Jay");
-assert.equal(jayRow.month.cents, (1000 + 500 + 100) * 100);              // crew job credits lead only
+assert.equal(jayRow.month.cents, (1000 + 500 + 100) * 100);              // crew job credits Jay too
 assert.equal(jayRow.month.jobs, 3);
 assert.equal(jayRow.lastMonth.cents, (400 + 50 + 200) * 100);
-assert.equal(r.byTech.find(x => x.name === "Matt").month.cents, (300 + 600) * 100);
+assert.equal(r.byTech.find(x => x.name === "Matt").month.cents, (500 + 300 + 600) * 100); // incl. the crew job
+assert.equal(r.byTech.find(x => x.name === "Matt").month.jobs, 3);
 assert.equal(r.byTech.find(x => x.name === "Matt").lastMonth.cents, 900 * 100);
 assert.equal(r.byTech.find(x => x.name === "Sam").month.cents, 0);       // quiet truck still listed
-assert.equal(r.byTech.reduce((s, x) => s + x.month.cents, 0), r.periods.month.cents);
+// Crew job ($500, Jay + Matt) is on both rows but counted once in the tile.
+assert.equal(r.byTech.reduce((s, x) => s + x.month.cents, 0), r.periods.month.cents + 500 * 100);
 assert.equal(r.byTech.reduce((s, x) => s + x.lastMonth.cents, 0), r.periods.lastMonth.cents);
 
 // =============================================================================

@@ -1074,7 +1074,7 @@ function buildRevenueSlideHTML({ revenue }, slideLabel) {
   return `
     ${htmlHeader("REVENUE BY TRUCK")}
     <div class="slide-body">
-      <div class="subhead">COMPLETED JOBS  ·  CREDITED TO THE LEAD TECH ON THE JOB  ·  TRUCKS ONLY</div>
+      <div class="subhead">COMPLETED JOBS  ·  A JOB COUNTS FOR EVERY TRUCK TECH ON IT  ·  TOP TILES COUNT EACH JOB ONCE</div>
       <div class="data-tiles">${tilesHTML}</div>
       <div class="dt dt-wide" style="--cols: 11% 33% 7% 12% 15% 8% 14%;">
         <div class="dt-row head">

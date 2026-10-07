@@ -1,10 +1,12 @@
 // Revenue by truck.
 //
-// Only techs who have their own truck are listed. A job's revenue is credited
-// to its LEAD tech (assigned_employees[0]), so the table adds up to the tiles.
-// Revenue is the job's total_amount (cents), counted on the ET day the job was
-// completed. Jobs led by anyone else (office staff, new hires without a truck)
-// are left out of the table and reported as "other" for the week.
+// Only techs who have their own truck are listed. A job's full total_amount
+// (cents) is credited to EVERY truck tech assigned to it, counted on the ET day
+// the job was completed. So a two-tech job shows on both techs' rows and the
+// per-truck rows can add up to MORE than the tiles; the tiles count each job
+// once (any job with at least one truck tech on it). Jobs with no truck tech
+// assigned (office staff, new hires without a truck) are left out and reported
+// as "other" for the week.
 //
 // Split into a pure `rollupRevenue` (easy to test) and a thin `getRevenueByTruck`
 // that pulls from the HCP API.
@@ -75,10 +77,10 @@ export function rollupRevenue(jobs, { now = new Date() } = {}) {
     if (!day) continue;
 
     const inWeek = inRange(day, k.weekStart, k.today);
-    const lead = (j.assigned_employees || [])[0];
-    const row = lead ? techRows.get(lead.id) : null;
+    const ids = [...new Set((j.assigned_employees || []).map(e => e.id))];
+    const rowsFor = ids.map(id => techRows.get(id)).filter(Boolean);
 
-    if (!row) {
+    if (rowsFor.length === 0) {
       if (inWeek) otherWeekCents += cents;
       continue;
     }
@@ -90,8 +92,8 @@ export function rollupRevenue(jobs, { now = new Date() } = {}) {
     if (inWeek) add(periods.week, cents);
     if (inLastWeek) add(periods.lastWeek, cents);
     if (inRange(day, k.lastWeekStart, k.lastWeekSamePointEnd)) add(periods.lastWeekSamePoint, cents);
-    if (inMonth) { add(periods.month, cents); add(row.month, cents); }
-    if (inRange(day, k.lastMonthStart, k.lastMonthEnd)) { add(periods.lastMonth, cents); add(row.lastMonth, cents); }
+    if (inMonth) { add(periods.month, cents); rowsFor.forEach(r => add(r.month, cents)); }
+    if (inRange(day, k.lastMonthStart, k.lastMonthEnd)) { add(periods.lastMonth, cents); rowsFor.forEach(r => add(r.lastMonth, cents)); }
     if (inRange(day, k.lastMonthStart, k.lastMonthSamePointEnd)) add(periods.lastMonthSamePoint, cents);
   }
 
