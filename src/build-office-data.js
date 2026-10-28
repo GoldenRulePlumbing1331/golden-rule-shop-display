@@ -387,6 +387,19 @@ function extractTechNameFromOOO(title) {
   return title.slice(0, dashIdx).trim().toUpperCase();
 }
 
+// HCP syncs every job onto the calendar. Those entries carry the customer's
+// phone number or ZIP in the title (and link to housecallpro.com in the
+// body), which real office events never do. Jobs already live on the crew
+// slide, so they're kept off the events slide.
+function looksLikeHCPJob(e) {
+  const title = e.summary || "";
+  if (/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/.test(title)) return true;   // phone
+  if (/\b\d{5}(?:-\d{4})?\b/.test(title)) return true;                  // ZIP
+  const body = `${e.description || ""} ${e.location || ""}`.toLowerCase();
+  if (body.includes("housecallpro")) return true;
+  return false;
+}
+
 // One calendar pull for the day. Returns the techs marked out (for crew
 // status) and the full list of today's events (for the events slide).
 async function getCalendarToday(calendarId, { startISO, endISO, todayDateOnlyET }) {
@@ -399,10 +412,12 @@ async function getCalendarToday(calendarId, { startISO, endISO, todayDateOnlyET 
 
     const outNames = new Set();
     const events = [];
+    let droppedJobs = 0;
     for (const e of raw) {
       const title = (e.summary || "").trim();
       if (!title) continue;
       if (e.status === "cancelled") continue;
+      if (looksLikeHCPJob(e)) { droppedJobs += 1; continue; }
 
       const allDay = !!e.start?.date;
       if (allDay) {
@@ -432,6 +447,9 @@ async function getCalendarToday(calendarId, { startISO, endISO, todayDateOnlyET 
         isOut,
       });
     }
+
+    console.log(`[build-office-data] calendar: ${raw.length} raw items, ${droppedJobs} HCP jobs dropped, ${events.length} events kept`);
+    for (const ev of events) console.log(`[build-office-data]   event: ${ev.timeLabel} — ${ev.title}`);
 
     // All-day first, then by start time
     events.sort((a, b) => {
