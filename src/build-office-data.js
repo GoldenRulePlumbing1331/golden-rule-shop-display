@@ -387,32 +387,62 @@ function extractTechNameFromOOO(title) {
   return title.slice(0, dashIdx).trim().toUpperCase();
 }
 
-async function getOutOfOfficeTechsToday(calendarId, todayDateOnly) {
-  if (!calendarId) return new Set();
+// One calendar pull for the day. Returns the techs marked out (for crew
+// status) and the full list of today's events (for the events slide).
+async function getCalendarToday(calendarId, { startISO, endISO, todayDateOnlyET }) {
+  const empty = { outNames: new Set(), events: [] };
+  if (!calendarId) return empty;
   try {
-    // Pull events for today only (with a small buffer)
-    const startDate = `${todayDateOnly}T00:00:00Z`;
-    // End of day plus 12h buffer for timezone
-    const endDate = new Date(`${todayDateOnly}T23:59:59Z`);
-    endDate.setUTCDate(endDate.getUTCDate() + 1);
-    const endISO = endDate.toISOString();
-
-    const events = await readCalendarEvents(calendarId, {
-      startISO: startDate,
-      endISO,
-    });
+    // Google returns anything overlapping the window, which for all-day events
+    // means yesterday's event ending at today's midnight — filter below.
+    const raw = await readCalendarEvents(calendarId, { startISO, endISO });
 
     const outNames = new Set();
-    for (const e of events) {
-      const title = e.summary || "";
-      if (!isOutOfOfficeTitle(title)) continue;
-      const techName = extractTechNameFromOOO(title);
-      if (techName) outNames.add(techName);
+    const events = [];
+    for (const e of raw) {
+      const title = (e.summary || "").trim();
+      if (!title) continue;
+      if (e.status === "cancelled") continue;
+
+      const allDay = !!e.start?.date;
+      if (allDay) {
+        // end.date is exclusive
+        if (!(e.start.date <= todayDateOnlyET && todayDateOnlyET < (e.end?.date || e.start.date))) continue;
+      } else {
+        const startKey = etDateKey(e.start?.dateTime);
+        const endKey = e.end?.dateTime ? etDateKey(new Date(new Date(e.end.dateTime).getTime() - 60000)) : startKey;
+        if (!(startKey <= todayDateOnlyET && todayDateOnlyET <= endKey)) continue;
+      }
+
+      const isOut = isOutOfOfficeTitle(title);
+      if (isOut) {
+        const techName = extractTechNameFromOOO(title);
+        if (techName) outNames.add(techName);
+      }
+
+      events.push({
+        title,
+        allDay,
+        startISO: allDay ? null : e.start.dateTime,
+        endISO: allDay ? null : (e.end?.dateTime || null),
+        timeLabel: allDay
+          ? "ALL DAY"
+          : [fmtTimeET(e.start.dateTime), e.end?.dateTime ? fmtTimeET(e.end.dateTime) : null].filter(Boolean).join(" – "),
+        location: (e.location || "").trim(),
+        isOut,
+      });
     }
-    return outNames;
+
+    // All-day first, then by start time
+    events.sort((a, b) => {
+      if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
+      return (a.startISO || "").localeCompare(b.startISO || "");
+    });
+
+    return { outNames, events };
   } catch (e) {
-    console.warn(`[build-office-data] OOO fetch failed: ${e.message}`);
-    return new Set();
+    console.warn(`[build-office-data] calendar fetch failed: ${e.message}`);
+    return empty;
   }
 }
 
@@ -828,18 +858,20 @@ export async function buildOfficeData({ calendarId } = {}) {
 
   // Fetch in parallel. The multi-day check is best-effort: if it fails, the
   // board still builds exactly as it did before.
-  const [todayJobs, multiDay, ooOfficeNames, openEstimates, pastDueInvoices] = await Promise.all([
+  const [todayJobs, multiDay, calendar, openEstimates, pastDueInvoices] = await Promise.all([
     pullJobsInRange(startISO, endISO),
     findMultiDayJobsToday({ startISO, endISO, todayDateOnlyET, trackedIds }).catch(e => {
       console.warn(`[build-office-data] multi-day check failed: ${e.message}`);
       return { byTech: new Map(), jobs: [] };
     }),
-    getOutOfOfficeTechsToday(calendarId, todayDateOnlyET),
+    getCalendarToday(calendarId, { startISO, endISO, todayDateOnlyET }),
     pullOpenEstimates(),
     pullPastDueInvoices(),
   ]);
+  const ooOfficeNames = calendar.outNames;
 
   console.log(`[build-office-data] Pulled ${todayJobs.length} jobs for today (+${multiDay.jobs.length} multi-day jobs with a visit today)`);
+  console.log(`[build-office-data] Calendar events today: ${calendar.events.length}`);
   console.log(`[build-office-data] OOO techs today: ${[...ooOfficeNames].join(", ") || "(none)"}`);
   console.log(`[build-office-data] Open estimates: ${openEstimates.length}`);
   console.log(`[build-office-data] Past-due invoices: ${pastDueInvoices.length}`);
@@ -889,15 +921,16 @@ export async function buildOfficeData({ calendarId } = {}) {
     todayDateOnly: todayDateOnlyET,
     crew,
     todaySummary,
+    events: calendar.events,
     openEstimates: {
-      list: openEstimates.slice(0, 8),
+      list: openEstimates.slice(0, 10),
       totalCount: openEstimates.length,
       totalValue: `${openEstimates.length} ESTIMATES MISSING PRICING`,
       agedCount: openEstimates.filter(e => e.ageDays >= 7).length,
       agedValue: "",
     },
     pastDueInvoices: {
-      list: pastDueInvoices.slice(0, 8),
+      list: pastDueInvoices.slice(0, 10),
       totalCount: pastDueInvoices.length,
       totalValue: formatRevenue(totalPastDueValue),
     },

@@ -16,7 +16,6 @@ async function main() {
   }
 
   console.log("[build-office] Fetching office data...");
-  // ... (rest of existing main() body stays unchanged)
   const data = await buildOfficeData({ calendarId });
 
   console.log("[build-office] Rendering HTML...");
@@ -39,6 +38,7 @@ async function main() {
   console.log(`[build-office] Crew: ${onSite} on site, ${multiDay} multi-day, ${late} late, ${out} out, ${noJobs} no jobs`);
   console.log(`[build-office] Today: ${data.todaySummary.completed} done, ${data.todaySummary.inProgress} in progress, ${data.todaySummary.notStarted} not started`);
   console.log(`[build-office] Pipeline: ${data.openEstimates.totalCount} estimates ${data.openEstimates.totalValue}, ${data.pastDueInvoices.totalCount} unpaid ${data.pastDueInvoices.totalValue}`);
+  console.log(`[build-office] Events today: ${(data.events || []).length}`);
   console.log(`[build-office] Hot items: ${data.hotList.length}`);
 }
 
